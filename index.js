@@ -1253,21 +1253,24 @@ client.on("interactionCreate", async (interaction) => {
             }
 
             case "meme": {
-                const topText = interaction.options.getString("top");
-                const bottomText = interaction.options.getString("bottom");
-                const memeTemplates = [
-                    "One does not simply walk into Mordor",
-                    "Drake Hotline Bling",
-                    "Distracted Boyfriend",
-                    "Expanding Brain",
-                ];
-                const template = memeTemplates[Math.floor(Math.random() * memeTemplates.length)];
-                await interaction.reply({
-                    content: `😂 **${template}**\n**Top:** ${topText.toUpperCase()}\n**Bottom:** ${bottomText.toUpperCase()}`,
-                    flags: [],
-                });
-                break;
-            }
+    try {
+        const response = await fetch('https://meme-api.com/gimme');
+        const data = await response.json();
+        if (!data.url || !data.url.match(/\.(jpg|png|gif)$/)) {
+            return interaction.reply("❌ Couldn’t find an image meme right now!");
+        }
+        const memeEmbed = new EmbedBuilder()
+            .setTitle(data.title || "Random Meme")
+            .setImage(data.url)
+            .setFooter({ text: `From r/${data.subreddit} • ${data.ups} upvotes` })
+            .setColor(0xff9900);
+        await interaction.reply({ embeds: [memeEmbed] });
+    } catch (error) {
+        console.error("Meme API Error:", error);
+        await interaction.reply("❌ Couldn’t fetch a meme right now!");
+    }
+    break;
+}
         }
     } catch (error) {
         console.error("❌ Command Execution Error:", error);
