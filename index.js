@@ -1322,14 +1322,20 @@ client.on("interactionCreate", async (interaction) => {
 
             case "translate": {
     const text = interaction.options.getString("text");
-    let toLang = interaction.options.getString("to") || "en";
+    let toLang = interaction.options.getString("language") || "en";
+    const fromLang = interaction.options.getString("from"); // Get the source language if provided
     
     // Map full language names to codes
     toLang = languageMap[toLang.toLowerCase()] || toLang;
+    const fromLangMapped = fromLang ? (languageMap[fromLang.toLowerCase()] || fromLang) : undefined;
 
     try {
-        console.log(`Translating: "${text}" to ${toLang}`);
-        const result = await translate(text, { to: toLang });
+        console.log(`Translating: "${text}" from ${fromLangMapped || "auto"} to ${toLang}`);
+        const translateOptions = { to: toLang };
+        if (fromLangMapped) {
+            translateOptions.from = fromLangMapped; // Specify the source language if provided
+        }
+        const result = await translate(text, translateOptions);
         console.log("Translation Result:", result);
 
         const languageNames = {
@@ -1337,9 +1343,9 @@ client.on("interactionCreate", async (interaction) => {
             en: "English",
             fr: "French",
             es: "Spanish",
-            ge: "German",
+            de: "German",
         };
-        const fromLangName = languageNames[result.from.language.iso] || result.from.language.iso;
+        const fromLangName = languageNames[result.raw.src] || result.raw.src;
         const toLangName = languageNames[toLang] || toLang;
 
         const translationEmbed = new EmbedBuilder()
