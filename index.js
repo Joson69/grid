@@ -871,46 +871,49 @@ client.on("interactionCreate", async (interaction) => {
             }
 
             case "purge": {
-                if (interaction.channel.type !== ChannelType.GuildText) {
-                    return interaction.reply({
-                        content: "❌ This command can only be used in text channels!",
-                        flags: [InteractionResponseFlags.Ephemeral],
-                    });
-                }
-                if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-                    return interaction.reply({
-                        content: "❌ You don’t have permission to delete messages!",
-                        flags: [InteractionResponseFlags.Ephemeral],
-                    });
-                }
-                if (!interaction.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-                    return interaction.reply({
-                        content: "❌ I don’t have permission to delete messages!",
-                        flags: [InteractionResponseFlags.Ephemeral],
-                    });
-                }
-                const purgeAmount = interaction.options.getInteger("amount");
-                if (purgeAmount < 1 || purgeAmount > 100) {
-                    return interaction.reply({
-                        content: "❌ You can only delete between 1 and 100 messages!",
-                        flags: [InteractionResponseFlags.Ephemeral],
-                    });
-                }
-                try {
-                    const deletedMessages = await interaction.channel.bulkDelete(purgeAmount, true);
-                    await interaction.reply({
-                        content: `🧹 Deleted **${deletedMessages.size}** messages.`,
-                        flags: [InteractionResponseFlags.Ephemeral],
-                    });
-                } catch (error) {
-                    console.error("Purge Error:", error);
-                    await interaction.reply({
-                        content: "❌ Error deleting messages.",
-                        flags: [InteractionResponseFlags.Ephemeral],
-                    });
-                }
-                break;
-            }
+    if (!interaction.channel.isTextBased()) {
+        return interaction.reply({
+            content: "❌ This command can only be used in text channels!",
+            ephemeral: true, // ✅ Correct ephemeral usage
+        });
+    }
+    if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
+        return interaction.reply({
+            content: "❌ You don’t have permission to delete messages!",
+            ephemeral: true,
+        });
+    }
+    if (!interaction.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
+        return interaction.reply({
+            content: "❌ I don’t have permission to delete messages!",
+            ephemeral: true,
+        });
+    }
+    
+    const purgeAmount = interaction.options.getInteger("amount");
+    if (!purgeAmount || purgeAmount < 1 || purgeAmount > 100) {
+        return interaction.reply({
+            content: "❌ You can only delete between 1 and 100 messages!",
+            ephemeral: true,
+        });
+    }
+
+    try {
+        const deletedMessages = await interaction.channel.bulkDelete(purgeAmount, true);
+        await interaction.reply({
+            content: `🧹 Deleted **${deletedMessages.size}** messages.`,
+            ephemeral: true,
+        });
+    } catch (error) {
+        console.error("Purge Error:", error);
+        await interaction.reply({
+            content: "❌ Error deleting messages.",
+            ephemeral: true,
+        });
+    }
+    break;
+}
+
 
             case "stats": {
                 const uptime = process.uptime();
