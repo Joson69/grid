@@ -1181,13 +1181,18 @@ client.on("interactionCreate", async (interaction) => {
             }
 
             case "dadjoke": {
-                const jokes = [
-                    "Why don't skeletons fight each other? They don't have the guts!",
-                    "I told my wife she should embrace her mistakes. She gave me a hug.",
-                ];
-                await interaction.reply(jokes[Math.floor(Math.random() * jokes.length)]);
-                break;
-            }
+    try {
+        const response = await fetch('https://icanhazdadjoke.com/', {
+            headers: { Accept: 'application/json' }
+        });
+        const data = await response.json();
+        await interaction.reply(data.joke);
+    } catch (error) {
+        console.error("Dad Joke API Error:", error);
+        await interaction.reply("❌ Couldn’t fetch a dad joke right now!");
+    }
+    break;
+}
 
                 case "define": {
                     const word = interaction.options.getString("word");
