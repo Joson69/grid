@@ -26,6 +26,16 @@ const {
 const fetch = (...args) => import("node-fetch").then(({ default: fetch }) => fetch(...args));
 require("dotenv").config();
 
+const { translate } = require('@vitalets/google-translate-api');
+
+const languageMap = {
+    english: "en",
+    hindi: "hi",
+    french: "fr",
+    spanish: "es",
+    german: "de",
+};
+
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -1312,12 +1322,26 @@ client.on("interactionCreate", async (interaction) => {
 
             case "translate": {
     const text = interaction.options.getString("text");
-    const toLang = interaction.options.getString("to") || "en";
+    let toLang = interaction.options.getString("to") || "en";
+    
+    // Map full language names to codes
+    toLang = languageMap[toLang.toLowerCase()] || toLang;
 
     try {
+        console.log(`Translating: "${text}" to ${toLang}`);
         const result = await translate(text, { to: toLang });
+        console.log("Translation Result:", result);
+
+        const languageNames = {
+            hi: "Hindi",
+            en: "English",
+            fr: "French",
+            es: "Spanish",
+            ge: "German",
+        };
         const fromLangName = languageNames[result.from.language.iso] || result.from.language.iso;
         const toLangName = languageNames[toLang] || toLang;
+
         const translationEmbed = new EmbedBuilder()
             .setTitle("Translation")
             .addFields(
@@ -1328,8 +1352,8 @@ client.on("interactionCreate", async (interaction) => {
             .setFooter({ text: `Requested by ${interaction.user.tag}` });
         await interaction.reply({ embeds: [translationEmbed] });
     } catch (error) {
-        console.error("Translation Error:", error);
-        await interaction.reply("❌ Couldn’t translate the text—try again later!");
+        console.error("Translation Error Details:", error.message, error.stack);
+        await interaction.reply("❌ Couldn’t translate the text—try again later! (Check logs for details)");
     }
     break;
 }
