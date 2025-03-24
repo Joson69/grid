@@ -174,8 +174,18 @@ client.on("interactionCreate", async (interaction) => {
             }
 
             case "coinflip": {
-    const choice = interaction.options.getString("choice").toLowerCase();
+    const choice = interaction.options.getString("choice");
     const bet = interaction.options.getInteger("bet");
+
+    // Check if choice is provided
+    if (!choice) {
+        return interaction.reply({
+            content: "❌ Please provide a choice (heads or tails)!",
+            ephemeral: true
+        });
+    }
+
+    const userChoice = choice.toLowerCase();
 
     // Get user's currency
     const userId = interaction.user.id;
@@ -185,7 +195,7 @@ client.on("interactionCreate", async (interaction) => {
     if (userCurrency.pocket < bet) {
         return interaction.reply({
             content: `❌ You don’t have enough currency to place this bet! Your pocket: ${userCurrency.pocket}`,
-            flags: InteractionResponseFlags.Ephemeral
+            ephemeral: true
         });
     }
 
@@ -194,7 +204,7 @@ client.on("interactionCreate", async (interaction) => {
 
     // Flip the coin
     const result = Math.random() < 0.5 ? "heads" : "tails";
-    const won = choice === result;
+    const won = userChoice === result;
     let payout = 0;
 
     if (won) {
@@ -209,7 +219,7 @@ client.on("interactionCreate", async (interaction) => {
     const embed = new EmbedBuilder()
         .setTitle('🪙 Coin Flip')
         .addFields(
-            { name: 'Your Choice', value: choice.charAt(0).toUpperCase() + choice.slice(1), inline: true },
+            { name: 'Your Choice', value: userChoice.charAt(0).toUpperCase() + userChoice.slice(1), inline: true },
             { name: 'Result', value: result.charAt(0).toUpperCase() + result.slice(1), inline: true },
             { name: 'Outcome', value: won ? 'You Win! 🎉' : 'You Lose! 😔', inline: false },
             { name: 'Payout', value: payout.toLocaleString(), inline: true },
@@ -1123,80 +1133,73 @@ client.on("interactionCreate", async (interaction) => {
                 break;
             }
 
-
-case "blackjack": {
+            case "blackjack": {
     if (!interaction.channel) return;
 
     const suits = ['S', 'H', 'C', 'D'];
     const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
-    // Emoji mapping for all 52 cards
+    // Map of card values and suits to custom emojis
     const emojiMap = {
         // Spades (S)
-        'card_2S': '<:card_2S:1353687787576098886>',
-        'card_3S': '<:card_3S:1353687839891787786>',
-        'card_4S': '<:card_4S:1353687904152588308>',
-        'card_5S': '<:card_5S:1353687968203935816>',
-        'card_6S': '<:card_6S:1353688039033147433>',
-        'card_7S': '<:card_7S:1353688111393013801>',
-        'card_8S': '<:card_8S:1353688190506106930>',
-        'card_9S': '<:card_9S:1353688310333050941>',
-        'card_10S': '<:card_10S:1353688409293721620>',
-        'card_JS': '<:card_JS:1353688597307330641>',
-        'card_QS': '<:card_QS:1353688747186585712>',
-        'card_KS': '<:card_KS:1353688671911411753>',
-        'card_AS': '<:card_AS:1353688496661069835>',
-
+        '2S': '<:card_2S:123456789012345678>', // Replace with your emoji ID
+        '3S': '<:card_3S:123456789012345679>',
+        '4S': '<:card_4S:123456789012345680>',
+        '5S': '<:card_5S:123456789012345681>',
+        '6S': '<:card_6S:123456789012345682>',
+        '7S': '<:card_7S:123456789012345683>',
+        '8S': '<:card_8S:123456789012345684>',
+        '9S': '<:card_9S:123456789012345685>',
+        '10S': '<:card_10S:123456789012345686>',
+        'JS': '<:card_JS:123456789012345687>',
+        'QS': '<:card_QS:123456789012345688>',
+        'KS': '<:card_KS:123456789012345689>',
+        'AS': '<:card_AS:123456789012345690>',
         // Hearts (H)
-        'card_2H': '<:card_2H:1353687774137548891>',
-        'card_3H': '<:card_3H:1353687826809753600>',
-        'card_4H': '<:card_4H:1353687885995315270>',
-        'card_5H': '<:card_5H:1353687946544549939>',
-        'card_6H': '<:card_6H:1353688024470257724>',
-        'card_7H': '<:card_7H:1353688096650035220>',
-        'card_8H': '<:card_8H:1353688174064566313>',
-        'card_9H': '<:card_9H:1353688268843257856>',
-        'card_10H': '<:card_10H:1353688372526190632>',
-        'card_JH': '<:card_JH:1353688582044258315>',
-        'card_QH': '<:card_QH:1353688727746248734>',
-        'card_KH': '<:card_KH:1353688653758595133>',
-        'card_AH': '<:card_AH:1353688478235492403>',
-
-        // Diamonds (D)
-        'card_2D': '<:card_2D:1353687762397696111>',
-        'card_3D': '<:card_3D:1353687814675501118>',
-        'card_4D': '<:card_4D:1353687865615188049>',
-        'card_5D': '<:card_5D:1353687932774649926>',
-        'card_6D': '<:card_6D:1353688011740549150>',
-        'card_7D': '<:card_7D:1353688083500896256>',
-        'card_8D': '<:card_8D:1353688147317358714>',
-        'card_9D': '<:card_9D:1353688227369979914>',
-        'card_10D': '<:card_10D:1353688344906829889>',
-        'card_JD': '<:card_JD:1353688552277282867>',
-        'card_QD': '<:card_QD:1353688707047227402>',
-        'card_KD': '<:card_KD:1353688634762461214>',
-        'card_AD': '<:card_AD:1353688459335962655>',
-
+        '2H': '<:card_2H:123456789012345691>',
+        '3H': '<:card_3H:123456789012345692>',
+        '4H': '<:card_4H:123456789012345693>',
+        '5H': '<:card_5H:123456789012345694>',
+        '6H': '<:card_6H:123456789012345695>',
+        '7H': '<:card_7H:123456789012345696>',
+        '8H': '<:card_8H:123456789012345697>',
+        '9H': '<:card_9H:123456789012345698>',
+        '10H': '<:card_10H:123456789012345699>',
+        'JH': '<:card_JH:123456789012345700>',
+        'QH': '<:card_QH:123456789012345701>',
+        'KH': '<:card_KH:123456789012345702>',
+        'AH': '<:card_AH:123456789012345703>',
         // Clubs (C)
-        'card_2C': '<:card_2C:1353687744521703424>',
-        'card_3C': '<:card_3C:1353687800800739384>',
-        'card_4C': '<:card_4C:1353687853527203932>',
-        'card_5C': '<:card_5C:1353687918199439463>',
-        'card_6C': '<:card_6C:1353687985408708609>',
-        'card_7C': '<:card_7C:1353688066354708530>',
-        'card_8C': '<:card_8C:1353688130045349918>',
-        'card_9C': '<:card_9C:1353688209573543967>',
-        'card_10C': '<:card_10C:1353688327403864144>',
-        'card_JC': '<:card_JC:1353688533012844575>',
-        'card_QC': '<:card_QC:1353688688781164604>',
-        'card_KC': '<:card_KC:1353688614596378676>',
-        'card_AC': '<:card_AC:1353688438125367318>',
+        '2C': '<:card_2C:123456789012345704>',
+        '3C': '<:card_3C:123456789012345705>',
+        '4C': '<:card_4C:123456789012345706>',
+        '5C': '<:card_5C:123456789012345707>',
+        '6C': '<:card_6C:123456789012345708>',
+        '7C': '<:card_7C:123456789012345709>',
+        '8C': '<:card_8C:123456789012345710>',
+        '9C': '<:card_9C:123456789012345711>',
+        '10C': '<:card_10C:123456789012345712>',
+        'JC': '<:card_JC:123456789012345713>',
+        'QC': '<:card_QC:123456789012345714>',
+        'KC': '<:card_KC:123456789012345715>',
+        'AC': '<:card_AC:123456789012345716>',
+        // Diamonds (D)
+        '2D': '<:card_2D:123456789012345717>',
+        '3D': '<:card_3D:123456789012345718>',
+        '4D': '<:card_4D:123456789012345719>',
+        '5D': '<:card_5D:123456789012345720>',
+        '6D': '<:card_6D:123456789012345721>',
+        '7D': '<:card_7D:123456789012345722>',
+        '8D': '<:card_8D:123456789012345723>',
+        '9D': '<:card_9D:123456789012345724>',
+        '10D': '<:card_10D:123456789012345725>',
+        'JD': '<:card_JD:123456789012345726>',
+        'QD': '<:card_QD:123456789012345727>',
+        'KD': '<:card_KD:123456789012345728>',
+        'AD': '<:card_AD:123456789012345729>',
+        // Card back for hidden cards
+        'BACK': '<:card_back:987654321098765432>' // Replace with your card back emoji ID
     };
-
-    // Map to get emoji IDs from emoji strings
-    const emojiIdMap = Object.fromEntries(
-        Object.entries(emojiMap).map(([key, value]) => [key, value.match(/:(\d+)>/)[1]])
-    );
 
     function createDeck() {
         return suits.flatMap(suit => values.map(value => ({ value, suit })));
@@ -1229,119 +1232,26 @@ case "blackjack": {
         return value;
     }
 
-    function getCardEmoji(card) {
-        const { value, suit } = card;
-        const cardName = `card_${value}${suit}`;
-        return emojiMap[cardName] || `${value}${suit}`;
+    function displayHand(hand, hideFirst = false) {
+        return hand.map((card, index) => {
+            if (hideFirst && index === 1) return emojiMap['BACK'];
+            const cardKey = `${card.value}${card.suit}`;
+            return emojiMap[cardKey] || '🃏'; // Fallback to a default card emoji if not found
+        }).join(' ');
     }
 
-    function getHandText(hand) {
-        const suitNames = { S: 'Spades', H: 'Hearts', D: 'Diamonds', C: 'Clubs' };
-        return hand.map(card => `${card.value} of ${suitNames[card.suit]}`).join(', ');
-    }
-
-    async function generateHandImage(playerHand, dealerHand, showDealer = false) {
-        const cardWidth = 100;
-        const cardHeight = 150;
-        const padding = 10;
-        const maxCards = Math.max(playerHand.length, dealerHand.length);
-        const canvasWidth = maxCards * (cardWidth + padding) - padding;
-        const canvasHeight = (cardHeight + padding) * 2;
-
-        const canvas = createCanvas(canvasWidth, canvasHeight);
-        const ctx = canvas.getContext('2d');
-
-        ctx.fillStyle = '#1a1a1a';
-        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-        for (let i = 0; i < playerHand.length; i++) {
-            const card = playerHand[i];
-            const cardName = `card_${card.value}${card.suit}`;
-            const emojiId = emojiIdMap[cardName];
-            const imageUrl = `https://cdn.discordapp.com/emojis/${emojiId}.png`;
-
-            try {
-                const cardImage = await loadImage(imageUrl);
-                ctx.drawImage(cardImage, i * (cardWidth + padding), 0, cardWidth, cardHeight);
-            } catch (error) {
-                console.error(`Failed to load image for ${cardName}:`, error);
-                ctx.fillStyle = '#ff0000';
-                ctx.fillRect(i * (cardWidth + padding), 0, cardWidth, cardHeight);
-                ctx.fillStyle = '#ffffff';
-                ctx.font = '20px Arial';
-                ctx.fillText('Error', i * (cardWidth + padding) + 20, 75);
-            }
-        }
-
-        for (let i = 0; i < dealerHand.length; i++) {
-            if (i === 1 && !showDealer) {
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(i * (cardWidth + padding), cardHeight + padding, cardWidth, cardHeight);
-                ctx.fillStyle = '#ffffff';
-                ctx.font = '20px Arial';
-                ctx.fillText('Hidden', i * (cardWidth + padding) + 20, cardHeight + padding + 75);
-            } else {
-                const card = dealerHand[i];
-                const cardName = `card_${card.value}${card.suit}`;
-                const emojiId = emojiIdMap[cardName];
-                const imageUrl = `https://cdn.discordapp.com/emojis/${emojiId}.png`;
-
-                try {
-                    const cardImage = await loadImage(imageUrl);
-                    ctx.drawImage(cardImage, i * (cardWidth + padding), cardHeight + padding, cardWidth, cardHeight);
-                } catch (error) {
-                    console.error(`Failed to load image for ${cardName}:`, error);
-                    ctx.fillStyle = '#ff0000';
-                    ctx.fillRect(i * (cardWidth + padding), cardHeight + padding, cardWidth, cardHeight);
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = '20px Arial';
-                    ctx.fillText('Error', i * (cardWidth + padding) + 20, cardHeight + padding + 75);
-                }
-            }
-        }
-
-        return canvas.toBuffer('image/png');
-    }
-
-    // Initialize game state
     let deck = shuffleDeck(createDeck());
     let playerHand = [deck.pop(), deck.pop()];
     let dealerHand = [deck.pop(), deck.pop()];
     let playerValue = calculateHandValue(playerHand);
     let dealerValue = calculateHandValue(dealerHand);
-    let bet = 1000; // Default bet
-    let doubledDown = false;
-
-    // Get user's currency
-    const userId = interaction.user.id;
-    const userCurrency = getUserCurrency(userId);
-
-    // Check if user has enough currency to bet
-    if (userCurrency.pocket < bet) {
-        return interaction.reply({
-            content: "❌ You don’t have enough currency to place this bet! Your pocket: " + userCurrency.pocket,
-            flags: InteractionResponseFlags.Ephemeral
-        });
-    }
-
-    // Deduct the bet from the user's pocket
-    userCurrency.pocket -= bet;
-    saveCurrencyData();
-
-    // Generate the initial hand image
-    let handImageBuffer = await generateHandImage(playerHand, dealerHand);
 
     const embed = new EmbedBuilder()
         .setTitle('♠ Blackjack Game ♣')
-        .setImage('attachment://hand.png')
         .addFields(
-            { name: 'Pocket', value: userCurrency.pocket.toLocaleString(), inline: true },
-            { name: 'Winnings', value: userCurrency.winnings.toLocaleString(), inline: true },
-            { name: 'Net', value: (userCurrency.pocket + userCurrency.winnings - 10000).toLocaleString(), inline: true },
-            { name: 'Bet', value: bet.toLocaleString(), inline: true },
-            { name: 'Your Hand', value: `**Value:** ${playerValue}\n${getHandText(playerHand)}`, inline: false },
-            { name: 'Dealer\'s Hand', value: 'One card hidden', inline: false },
-            { name: 'Action', value: '🃏 Click **Hit** to draw a card, ✋ **Stand** to hold, or ⏫ **Double Down** to double your bet and draw one more card!', inline: false }
+            { name: 'Your Hand', value: `${displayHand(playerHand)}\n**Value:** ${playerValue}`, inline: false },
+            { name: 'Dealer\'s Hand', value: `${displayHand(dealerHand, true)}\n**Value:** ${calculateHandValue([dealerHand[0]])} (one card hidden)`, inline: false },
+            { name: 'Action', value: '🃏 Click **Hit** to draw a card, or ✋ **Stand** to hold your hand!', inline: false }
         )
         .setColor('#0099ff');
 
@@ -1354,127 +1264,37 @@ case "blackjack": {
             new ButtonBuilder()
                 .setCustomId('stand')
                 .setLabel('✋ Stand')
-                .setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder()
-                .setCustomId('double')
-                .setLabel('⏫ Double Down')
-                .setStyle(ButtonStyle.Success)
-                .setDisabled(userCurrency.pocket < bet || playerHand.length !== 2) // Disable if not enough currency or not the first turn
+                .setStyle(ButtonStyle.Secondary)
         );
 
-    await interaction.reply({
-        embeds: [embed],
-        components: [row],
-        files: [{ attachment: handImageBuffer, name: 'hand.png' }]
-    });
+    await interaction.reply({ embeds: [embed], components: [row] });
     const message = await interaction.fetchReply();
 
     const filter = i => i.user.id === interaction.user.id;
     const collector = message.createMessageComponentCollector({ filter, time: 60000 });
 
     collector.on('collect', async i => {
-        if (i.customId === 'hit' || i.customId === 'double') {
-            if (i.customId === 'double') {
-                // Double the bet and deduct from pocket
-                if (userCurrency.pocket < bet) {
-                    await i.update({
-                        embeds: [embed.setFields(
-                            { name: 'Pocket', value: userCurrency.pocket.toLocaleString(), inline: true },
-                            { name: 'Winnings', value: userCurrency.winnings.toLocaleString(), inline: true },
-                            { name: 'Net', value: (userCurrency.pocket + userCurrency.winnings - 10000).toLocaleString(), inline: true },
-                            { name: 'Bet', value: bet.toLocaleString(), inline: true },
-                            { name: 'Your Hand', value: `**Value:** ${playerValue}\n${getHandText(playerHand)}`, inline: false },
-                            { name: 'Dealer\'s Hand', value: 'One card hidden', inline: false },
-                            { name: 'Action', value: '❌ Not enough currency to double down!', inline: false }
-                        )],
-                        components: [row]
-                    });
-                    return;
-                }
-                userCurrency.pocket -= bet;
-                bet *= 2;
-                doubledDown = true;
-            }
-
+        if (i.customId === 'hit') {
             playerHand.push(deck.pop());
             playerValue = calculateHandValue(playerHand);
 
-            let updatedImageBuffer = await generateHandImage(playerHand, dealerHand);
-
-            if (playerValue > 21 || doubledDown) {
-                // If doubled down, end the turn after drawing one card
-                while (dealerValue < 17) {
-                    dealerHand.push(deck.pop());
-                    dealerValue = calculateHandValue(dealerHand);
-                }
-
-                let result;
-                let payout = 0;
-                if (playerValue > 21) {
-                    result = '**You went over 21! You lose!**';
-                } else if (dealerValue > 21) {
-                    result = '**Dealer Busts! You Win! 🎉**';
-                    payout = bet * 2;
-                } else if (playerValue > dealerValue) {
-                    result = '**You Win! 🎉**';
-                    payout = bet * 2;
-                } else if (dealerValue > playerValue) {
-                    result = '**Dealer Wins! 😔**';
-                } else {
-                    result = '**It\'s a Tie! 🤝**';
-                    payout = bet;
-                }
-
-                // Update currency
-                userCurrency.pocket += payout;
-                userCurrency.winnings += payout - bet;
-                saveCurrencyData();
-
-                updatedImageBuffer = await generateHandImage(playerHand, dealerHand, true);
+            if (playerValue > 21) {
                 embed.setFields(
-                    { name: 'Pocket', value: userCurrency.pocket.toLocaleString(), inline: true },
-                    { name: 'Winnings', value: userCurrency.winnings.toLocaleString(), inline: true },
-                    { name: 'Net', value: (userCurrency.pocket + userCurrency.winnings - 10000).toLocaleString(), inline: true },
-                    { name: 'Bet', value: bet.toLocaleString(), inline: true },
-                    { name: 'Your Hand', value: `**Value:** ${playerValue}\n${getHandText(playerHand)}`, inline: false },
-                    { name: 'Dealer\'s Hand', value: `**Value:** ${dealerValue}\n${getHandText(dealerHand)}`, inline: false },
-                    { name: 'Result', value: result, inline: false }
-                ).setColor(payout > bet ? '#00FF00' : '#FF0000');
+                    { name: 'Your Hand', value: `${displayHand(playerHand)}\n**Bust! 💀**`, inline: false },
+                    { name: 'Dealer\'s Hand', value: `${displayHand(dealerHand)}\n**Value:** ${dealerValue}`, inline: false },
+                    { name: 'Result', value: '**You went over 21! You lose!**', inline: false }
+                ).setColor('#FF0000');
 
-                await i.update({
-                    embeds: [embed],
-                    components: [],
-                    files: [{ attachment: updatedImageBuffer, name: 'hand.png' }]
-                });
+                await i.update({ embeds: [embed], components: [] });
                 collector.stop();
             } else {
                 embed.setFields(
-                    { name: 'Pocket', value: userCurrency.pocket.toLocaleString(), inline: true },
-                    { name: 'Winnings', value: userCurrency.winnings.toLocaleString(), inline: true },
-                    { name: 'Net', value: (userCurrency.pocket + userCurrency.winnings - 10000).toLocaleString(), inline: true },
-                    { name: 'Bet', value: bet.toLocaleString(), inline: true },
-                    { name: 'Your Hand', value: `**Value:** ${playerValue}\n${getHandText(playerHand)}`, inline: false },
-                    { name: 'Dealer\'s Hand', value: 'One card hidden', inline: false },
+                    { name: 'Your Hand', value: `${displayHand(playerHand)}\n**Value:** ${playerValue}`, inline: false },
+                    { name: 'Dealer\'s Hand', value: `${displayHand(dealerHand, true)}\n**Value:** ${calculateHandValue([dealerHand[0]])} (one card hidden)`, inline: false },
                     { name: 'Action', value: '🃏 Click **Hit** to draw a card, or ✋ **Stand** to hold your hand!', inline: false }
                 );
 
-                const updatedRow = new ActionRowBuilder()
-                    .addComponents(
-                        new ButtonBuilder()
-                            .setCustomId('hit')
-                            .setLabel('🃏 Hit')
-                            .setStyle(ButtonStyle.Primary),
-                        new ButtonBuilder()
-                            .setCustomId('stand')
-                            .setLabel('✋ Stand')
-                            .setStyle(ButtonStyle.Secondary)
-                    );
-
-                await i.update({
-                    embeds: [embed],
-                    components: [updatedRow],
-                    files: [{ attachment: updatedImageBuffer, name: 'hand.png' }]
-                });
+                await i.update({ embeds: [embed], components: [row] });
             }
         } else if (i.customId === 'stand') {
             while (dealerValue < 17) {
@@ -1482,42 +1302,18 @@ case "blackjack": {
                 dealerValue = calculateHandValue(dealerHand);
             }
 
-            let result;
-            let payout = 0;
-            if (dealerValue > 21) {
-                result = '**Dealer Busts! You Win! 🎉**';
-                payout = bet * 2;
-            } else if (playerValue > dealerValue) {
-                result = '**You Win! 🎉**';
-                payout = bet * 2;
-            } else if (dealerValue > playerValue) {
-                result = '**Dealer Wins! 😔**';
-            } else {
-                result = '**It\'s a Tie! 🤝**';
-                payout = bet;
-            }
+            let result = dealerValue > 21 ? '**Dealer Busts! You Win! 🎉**' :
+                playerValue > dealerValue ? '**You Win! 🎉**' :
+                dealerValue > playerValue ? '**Dealer Wins! 😔**' :
+                '**It\'s a Tie! 🤝**';
 
-            // Update currency
-            userCurrency.pocket += payout;
-            userCurrency.winnings += payout - bet;
-            saveCurrencyData();
-
-            const updatedImageBuffer = await generateHandImage(playerHand, dealerHand, true);
             embed.setFields(
-                { name: 'Pocket', value: userCurrency.pocket.toLocaleString(), inline: true },
-                { name: 'Winnings', value: userCurrency.winnings.toLocaleString(), inline: true },
-                { name: 'Net', value: (userCurrency.pocket + userCurrency.winnings - 10000).toLocaleString(), inline: true },
-                { name: 'Bet', value: bet.toLocaleString(), inline: true },
-                { name: 'Your Hand', value: `**Value:** ${playerValue}\n${getHandText(playerHand)}`, inline: false },
-                { name: 'Dealer\'s Hand', value: `**Value:** ${dealerValue}\n${getHandText(dealerHand)}`, inline: false },
+                { name: 'Your Hand', value: `${displayHand(playerHand)}\n**Value:** ${playerValue}`, inline: false },
+                { name: 'Dealer\'s Hand', value: `${displayHand(dealerHand)}\n**Value:** ${dealerValue}`, inline: false },
                 { name: 'Result', value: result, inline: false }
-            ).setColor(payout > bet ? '#00FF00' : '#FF0000');
+            ).setColor(dealerValue > 21 || playerValue > dealerValue ? '#00FF00' : '#FF0000');
 
-            await i.update({
-                embeds: [embed],
-                components: [],
-                files: [{ attachment: updatedImageBuffer, name: 'hand.png' }]
-            });
+            await i.update({ embeds: [embed], components: [] });
             collector.stop();
         }
     });
