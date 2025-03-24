@@ -12,6 +12,7 @@
   "dependencies": {
     "@discordjs/rest": "^2.4.3",
     "@vitalets/google-translate-api": "^9.2.0",
+    "figlet": "^1.5.2"
     "discord.js": "^14.18.0",
     "dotenv": "^16.4.7",
     "node-fetch": "^3.3.2",
