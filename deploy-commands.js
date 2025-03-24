@@ -60,9 +60,21 @@ const commands = [
         ],
     },
     {
-        name: "trivia",
-        description: "Start a random trivia question",
-    },
+    name: "trivia",
+    description: "Answer a random trivia question!",
+    options: [
+        {
+            name: "type",
+            description: "Type of question (truefalse or multiple)",
+            type: 3, // STRING
+            required: false,
+            choices: [
+                { name: "True/False", value: "boolean" },
+                { name: "Multiple Choice", value: "multiple" }
+            ]
+        }
+    ]
+},
     {
         name: "dadjoke",
         description: "Sends a random dad joke",
