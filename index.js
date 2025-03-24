@@ -1035,127 +1035,197 @@ client.on("interactionCreate", async (interaction) => {
                 break;
             }
                 case "blackjack": {
-                    if (!interaction.channel) return;
+    if (!interaction.channel) return;
 
-                    const suits = ['♠', '♥', '♣', '♦'];
-                    const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    const suits = ['S', 'H', 'C', 'D'];
+    const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
-                    function createDeck() {
-                        return suits.flatMap(suit => values.map(value => ({ value, suit })));
-                    }
+    // Emoji mapping for all 52 cards
+    const emojiMap = {
+        // Spades (S)
+        'card_2S': '<:card_2S:1353687787576098886>',
+        'card_3S': '<:card_3S:1353687839891787786>',
+        'card_4S': '<:card_4S:1353687904152588308>',
+        'card_5S': '<:card_5S:1353687968203935816>',
+        'card_6S': '<:card_6S:1353688039033147433>',
+        'card_7S': '<:card_7S:1353688111393013801>',
+        'card_8S': '<:card_8S:1353688190506106930>',
+        'card_9S': '<:card_9S:1353688310333050941>',
+        'card_10S': '<:card_10S:1353688409293721620>',
+        'card_JS': '<:card_JS:1353688597307330641>',
+        'card_QS': '<:card_QS:1353688747186585712>',
+        'card_KS': '<:card_KS:1353688671911411753>',
+        'card_AS': '<:card_AS:1353688496661069835>',
 
-                    function shuffleDeck(deck) {
-                        for (let i = deck.length - 1; i > 0; i--) {
-                            const j = Math.floor(Math.random() * (i + 1));
-                            [deck[i], deck[j]] = [deck[j], deck[i]];
-                        }
-                        return deck;
-                    }
+        // Hearts (H)
+        'card_2H': '<:card_2H:1353687774137548891>',
+        'card_3H': '<:card_3H:1353687826809753600>',
+        'card_4H': '<:card_4H:1353687885995315270>',
+        'card_5H': '<:card_5H:1353687946544549939>',
+        'card_6H': '<:card_6H:1353688024470257724>',
+        'card_7H': '<:card_7H:1353688096650035220>',
+        'card_8H': '<:card_8H:1353688174064566313>',
+        'card_9H': '<:card_9H:1353688268843257856>',
+        'card_10H': '<:card_10H:1353688372526190632>',
+        'card_JH': '<:card_JH:1353688582044258315>',
+        'card_QH': '<:card_QH:1353688727746248734>',
+        'card_KH': '<:card_KH:1353688653758595133>',
+        'card_AH': '<:card_AH:1353688478235492403>',
 
-                    function calculateHandValue(hand) {
-                        let value = 0, aces = 0;
-                        for (const card of hand) {
-                            if (card.value === 'A') {
-                                aces++;
-                                value += 11;
-                            } else if (['K', 'Q', 'J'].includes(card.value)) {
-                                value += 10;
-                            } else {
-                                value += parseInt(card.value);
-                            }
-                        }
-                        while (value > 21 && aces > 0) {
-                            value -= 10;
-                            aces--;
-                        }
-                        return value;
-                    }
+        // Diamonds (D)
+        'card_2D': '<:card_2D:1353687762397696111>',
+        'card_3D': '<:card_3D:1353687814675501118>',
+        'card_4D': '<:card_4D:1353687865615188049>',
+        'card_5D': '<:card_5D:1353687932774649926>',
+        'card_6D': '<:card_6D:1353688011740549150>',
+        'card_7D': '<:card_7D:1353688083500896256>',
+        'card_8D': '<:card_8D:1353688147317358714>',
+        'card_9D': '<:card_9D:1353688227369979914>',
+        'card_10D': '<:card_10D:1353688344906829889>',
+        'card_JD': '<:card_JD:1353688552277282867>',
+        'card_QD': '<:card_QD:1353688707047227402>',
+        'card_KD': '<:card_KD:1353688634762461214>',
+        'card_AD': '<:card_AD:1353688459335962655>',
 
-                    function displayHand(hand) {
-                        return hand.map(card => `${card.value}${card.suit}`).join(', ');
-                    }
+        // Clubs (C)
+        'card_2C': '<:card_2C:1353687744521703424>',
+        'card_3C': '<:card_3C:1353687800800739384>',
+        'card_4C': '<:card_4C:1353687853527203932>',
+        'card_5C': '<:card_5C:1353687918199439463>',
+        'card_6C': '<:card_6C:1353687985408708609>',
+        'card_7C': '<:card_7C:1353688066354708530>',
+        'card_8C': '<:card_8C:1353688130045349918>',
+        'card_9C': '<:card_9C:1353688209573543967>',
+        'card_10C': '<:card_10C:1353688327403864144>',
+        'card_JC': '<:card_JC:1353688533012844575>',
+        'card_QC': '<:card_QC:1353688688781164604>',
+        'card_KC': '<:card_KC:1353688614596378676>',
+        'card_AC': '<:card_AC:1353688438125367318>',
+    };
 
-                    let deck = shuffleDeck(createDeck());
-                    let playerHand = [deck.pop(), deck.pop()];
-                    let dealerHand = [deck.pop(), deck.pop()];
-                    let playerValue = calculateHandValue(playerHand);
-                    let dealerValue = calculateHandValue(dealerHand);
+    function createDeck() {
+        return suits.flatMap(suit => values.map(value => ({ value, suit })));
+    }
 
-                    const embed = new EmbedBuilder()
-                        .setTitle('♠ Blackjack Game ♣')
-                        .setDescription(
-                            `**Your Hand:** ${displayHand(playerHand)} (Value: **${playerValue}**)\n` +
-                            `**Dealer's Hand:** ${dealerHand[0].value}${dealerHand[0].suit}, [Hidden]\n\n` +
-                            '🃏 Click **Hit** to draw a card, or ✋ **Stand** to hold your hand!'
-                        )
-                        .setColor('#0099ff');
+    function shuffleDeck(deck) {
+        for (let i = deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [deck[i], deck[j]] = [deck[j], deck[i]];
+        }
+        return deck;
+    }
 
-                    const row = new ActionRowBuilder()
-                        .addComponents(
-                            new ButtonBuilder()
-                                .setCustomId('hit')
-                                .setLabel('🃏 Hit')
-                                .setStyle(ButtonStyle.Primary),
-                            new ButtonBuilder()
-                                .setCustomId('stand')
-                                .setLabel('✋ Stand')
-                                .setStyle(ButtonStyle.Secondary)
-                        );
+    function calculateHandValue(hand) {
+        let value = 0, aces = 0;
+        for (const card of hand) {
+            if (card.value === 'A') {
+                aces++;
+                value += 11;
+            } else if (['K', 'Q', 'J'].includes(card.value)) {
+                value += 10;
+            } else {
+                value += parseInt(card.value);
+            }
+        }
+        while (value > 21 && aces > 0) {
+            value -= 10;
+            aces--;
+        }
+        return value;
+    }
 
-                    const message = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
+    function getCardEmoji(card) {
+        const { value, suit } = card;
+        const cardName = `card_${value}${suit}`;
+        return emojiMap[cardName] || `${value}${suit}`; // Fallback to plain text if emoji not found
+    }
 
-                    const filter = i => i.user.id === interaction.user.id;
-                    const collector = message.createMessageComponentCollector({ filter, time: 60000 });
+    function displayHand(hand) {
+        return hand.map(card => getCardEmoji(card)).join(' ');
+    }
 
-                    collector.on('collect', async i => {
-                        if (i.customId === 'hit') {
-                            playerHand.push(deck.pop());
-                            playerValue = calculateHandValue(playerHand);
+    let deck = shuffleDeck(createDeck());
+    let playerHand = [deck.pop(), deck.pop()];
+    let dealerHand = [deck.pop(), deck.pop()];
+    let playerValue = calculateHandValue(playerHand);
+    let dealerValue = calculateHandValue(dealerHand);
 
-                            if (playerValue > 21) {
-                                embed.setDescription(
-                                    `**Your Hand:** ${displayHand(playerHand)} (**Bust! 💀**)\n` +
-                                    `**Dealer's Hand:** ${displayHand(dealerHand)} (Value: **${dealerValue}**)\n\n` +
-                                    '**You went over 21! You lose!**'
-                                ).setColor('#FF0000');
+    const embed = new EmbedBuilder()
+        .setTitle('♠ Blackjack Game ♣')
+        .setDescription(
+            `**Your Hand:** ${displayHand(playerHand)} (Value: **${playerValue}**)\n` +
+            `**Dealer's Hand:** ${getCardEmoji(dealerHand[0])}, [Hidden]\n\n` +
+            '🃏 Click **Hit** to draw a card, or ✋ **Stand** to hold your hand!'
+        )
+        .setColor('#0099ff');
 
-                                collector.stop();
-                            } else {
-                                embed.setDescription(
-                                    `**Your Hand:** ${displayHand(playerHand)} (Value: **${playerValue}**)\n` +
-                                    `**Dealer's Hand:** ${dealerHand[0].value}${dealerHand[0].suit}, [Hidden]\n\n` +
-                                    '🃏 Click **Hit** to draw a card, or ✋ **Stand** to hold your hand!'
-                                );
-                            }
-                            await i.update({ embeds: [embed], components: [row] });
-                        } else if (i.customId === 'stand') {
-                            while (dealerValue < 17) {
-                                dealerHand.push(deck.pop());
-                                dealerValue = calculateHandValue(dealerHand);
-                            }
+    const row = new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('hit')
+                .setLabel('🃏 Hit')
+                .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+                .setCustomId('stand')
+                .setLabel('✋ Stand')
+                .setStyle(ButtonStyle.Secondary)
+        );
 
-                            let result = dealerValue > 21 ? '**Dealer Busts! You Win! 🎉**' :
-                                playerValue > dealerValue ? '**You Win! 🎉**' :
-                                dealerValue > playerValue ? '**Dealer Wins! 😔**' :
-                                '**It\'s a Tie! 🤝**';
+    await interaction.reply({ embeds: [embed], components: [row] });
+    const message = await interaction.fetchReply();
 
-                            embed.setDescription(
-                                `**Your Hand:** ${displayHand(playerHand)} (Value: **${playerValue}**)\n` +
-                                `**Dealer's Hand:** ${displayHand(dealerHand)} (Value: **${dealerValue}**)\n\n` +
-                                result
-                            ).setColor(dealerValue > 21 || playerValue > dealerValue ? '#00FF00' : '#FF0000');
+    const filter = i => i.user.id === interaction.user.id;
+    const collector = message.createMessageComponentCollector({ filter, time: 60000 });
 
-                            await i.update({ embeds: [embed], components: [] });
-                            collector.stop();
-                        }
-                    });
+    collector.on('collect', async i => {
+        if (i.customId === 'hit') {
+            playerHand.push(deck.pop());
+            playerValue = calculateHandValue(playerHand);
 
-                    collector.on('end', () => {
-                        message.edit({ components: [] }).catch(() => {});
-                    });
+            if (playerValue > 21) {
+                embed.setDescription(
+                    `**Your Hand:** ${displayHand(playerHand)} (**Bust! 💀**)\n` +
+                    `**Dealer's Hand:** ${displayHand(dealerHand)} (Value: **${dealerValue}**)\n\n` +
+                    '**You went over 21! You lose!**'
+                ).setColor('#FF0000');
 
-                    break;
-                }
+                collector.stop();
+            } else {
+                embed.setDescription(
+                    `**Your Hand:** ${displayHand(playerHand)} (Value: **${playerValue}**)\n` +
+                    `**Dealer's Hand:** ${getCardEmoji(dealerHand[0])}, [Hidden]\n\n` +
+                    '🃏 Click **Hit** to draw a card, or ✋ **Stand** to hold your hand!'
+                );
+            }
+            await i.update({ embeds: [embed], components: [row] });
+        } else if (i.customId === 'stand') {
+            while (dealerValue < 17) {
+                dealerHand.push(deck.pop());
+                dealerValue = calculateHandValue(dealerHand);
+            }
+
+            let result = dealerValue > 21 ? '**Dealer Busts! You Win! 🎉**' :
+                playerValue > dealerValue ? '**You Win! 🎉**' :
+                dealerValue > playerValue ? '**Dealer Wins! 😔**' :
+                '**It\'s a Tie! 🤝**';
+
+            embed.setDescription(
+                `**Your Hand:** ${displayHand(playerHand)} (Value: **${playerValue}**)\n` +
+                `**Dealer's Hand:** ${displayHand(dealerHand)} (Value: **${dealerValue}**)\n\n` +
+                result
+            ).setColor(dealerValue > 21 || playerValue > dealerValue ? '#00FF00' : '#FF0000');
+
+            await i.update({ embeds: [embed], components: [] });
+            collector.stop();
+        }
+    });
+
+    collector.on('end', () => {
+        message.edit({ components: [] }).catch(() => {});
+    });
+
+    break;
+}
 
 
 
