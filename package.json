@@ -1,7 +1,7 @@
 {
-  "name": "discord-bot",
+  "name": "workspace",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "ecosystem.config.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -11,12 +11,12 @@
   "description": "",
   "dependencies": {
     "@discordjs/rest": "^2.4.3",
-    "@vitalets/google-translate-api": "^9.2.0",
-    "figlet": "^1.5.2",
-    "canvas": "^2.11.2",
+    "@vitalets/google-translate-api": "^9.2.1",
+    "canvas": "^3.1.0",
     "discord.js": "^14.18.0",
     "dotenv": "^16.4.7",
-    "node-fetch": "^3.3.2",
-    "express": "^4.18.2"
+    "express": "^4.21.2",
+    "figlet": "^1.8.0",
+    "node-fetch": "^3.3.2"
   }
 }
