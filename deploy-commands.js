@@ -182,9 +182,77 @@ const commands = [
         ],
     },
     {
-        name: "coinflip",
-        description: "Flips a coin and returns Heads or Tails",
-    },
+    name: "coinflip",
+    description: "Flip a coin and bet on the outcome!",
+    options: [
+        {
+            name: "choice",
+            type: 3, // String
+            description: "Your choice: heads or tails",
+            required: true,
+            choices: [
+                { name: "Heads", value: "heads" },
+                { name: "Tails", value: "tails" }
+            ]
+        },
+        {
+            name: "bet",
+            type: 4, // Integer
+            description: "The amount to bet",
+            required: true,
+            min_value: 1
+        },
+    ],
+},
+    {
+    name: "balance",
+    description: "Check your virtual currency balance",
+    options: [
+        {
+            name: "user",
+            type: 6, // User
+            description: "The user to check the balance for (default: you)",
+            required: false
+        }
+    ]
+},
+    {
+    name: "leaderboard",
+    description: "Show the top users by virtual currency winnings",
+    options: [
+        {
+            name: "limit",
+            type: 4, // Integer
+            description: "Number of users to show (default: 10)",
+            required: false,
+            min_value: 1,
+            max_value: 20
+        }
+    ]
+},
+    {
+    name: "give",
+    description: "Give virtual currency to another user",
+    options: [
+        {
+            name: "user",
+            type: 6, // User
+            description: "The user to give currency to",
+            required: true
+        },
+        {
+            name: "amount",
+            type: 4, // Integer
+            description: "The amount to give",
+            required: true,
+            min_value: 1
+        }
+    ]
+},
+    {
+    name: "daily",
+    description: "Claim your daily virtual currency reward",
+},
     {
         name: "hello",
         description: "Replies with a friendly greeting!",
