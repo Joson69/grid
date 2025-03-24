@@ -30,8 +30,6 @@ const { translate } = require('@vitalets/google-translate-api');
 
 const figlet = require("figlet");
 
-const { createCanvas, loadImage } = require('canvas');
-
 const fs = require('fs');
 
 // Load currency data
@@ -987,7 +985,7 @@ client.on("interactionCreate", async (interaction) => {
             ephemeral: true,
         });
     }
-    
+
     const purgeAmount = interaction.options.getInteger("amount");
     if (!purgeAmount || purgeAmount < 1 || purgeAmount > 100) {
         return interaction.reply({
@@ -1502,39 +1500,41 @@ client.on("interactionCreate", async (interaction) => {
     }
     break;
 }
-            case "daily": {
-    const userCurrency = getUserCurrency(interaction.user.id);
-    const now = Date.now();
-    const oneDay = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+                case "daily": {
+                    const userCurrency = getUserCurrency(interaction.user.id);
+                    const now = Date.now();
+                    const oneDay = 24 * 60 * 60 * 1000;
 
-    if (userCurrency.lastDaily && (now - userCurrency.lastDaily) < oneDay) {
-        const timeLeft = oneDay - (now - userCurrency.lastDaily);
-        const hours = Math.floor(timeLeft / (60 * 60 * 1000));
-        const minutes = Math.floor((timeLeft % (60 * 60 * 1000)) / (60 * 1000));
-        return interaction.reply({
-            content: `❌ You can claim your daily reward again in ${hours}h ${minutes}m!`,
-            flags: InteractionResponseFlags.Ephemeral
-        });
-    }
+                    if (userCurrency.lastDaily && (now - userCurrency.lastDaily) < oneDay) {
+                        const timeLeft = oneDay - (now - userCurrency.lastDaily);
+                        const hours = Math.floor(timeLeft / (60 * 60 * 1000));
+                        const minutes = Math.floor((timeLeft % (60 * 60 * 1000)) / (60 * 1000));
+                        return interaction.reply({
+                            content: `❌ You can claim your daily reward again in ${hours}h ${minutes}m!`,
+                            ephemeral: true
+                        });
+                    }
 
-    const reward = 1000;
-    userCurrency.pocket += reward;
-    userCurrency.winnings += reward;
-    userCurrency.lastDaily = now;
-    saveCurrencyData();
+                    const reward = 1000;
+                    userCurrency.pocket += reward;
+                    userCurrency.winnings += reward;
+                    userCurrency.lastDaily = now;
+                    await fs.promises.writeFile('currency.json', JSON.stringify(currencyData, null, 2)).catch(error => {
+                        console.error('Failed to save currency:', error);
+                    });
 
-    const embed = new EmbedBuilder()
-        .setTitle('🎁 Daily Reward')
-        .setDescription(`You claimed your daily reward of ${reward.toLocaleString()} currency!`)
-        .addFields(
-            { name: 'Pocket', value: userCurrency.pocket.toLocaleString(), inline: true },
-            { name: 'Winnings', value: userCurrency.winnings.toLocaleString(), inline: true }
-        )
-        .setColor('#FFD700');
+                    const embed = new EmbedBuilder()
+                        .setTitle('🎁 Daily Reward')
+                        .setDescription(`You claimed your daily reward of ${reward.toLocaleString()} currency!`)
+                        .addFields(
+                            { name: 'Pocket', value: userCurrency.pocket.toLocaleString(), inline: true },
+                            { name: 'Winnings', value: userCurrency.winnings.toLocaleString(), inline: true }
+                        )
+                        .setColor('#FFD700');
 
-    await interaction.reply({ embeds: [embed] });
-    break;
-}
+                    await interaction.reply({ embeds: [embed] });
+                    break;
+                }
 
             case "dadjoke": {
     try {
@@ -1704,7 +1704,7 @@ client.on("interactionCreate", async (interaction) => {
     const text = interaction.options.getString("text");
     let toLang = interaction.options.getString("language") || "en";
     const fromLang = interaction.options.getString("from"); // Get the source language if provided
-    
+
     // Map full language names to codes
     toLang = languageMap[toLang.toLowerCase()] || toLang;
     const fromLangMapped = fromLang ? (languageMap[fromLang.toLowerCase()] || fromLang) : undefined;
@@ -1836,4 +1836,3 @@ client.on("interactionCreate", async (interaction) => {
 client.login(process.env.DISCORD_TOKEN).catch((error) => {
     console.error("❌ Login Failed:", error);
 });
-console.log(`Public URL: https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`);
