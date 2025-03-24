@@ -1170,15 +1170,89 @@ client.on("interactionCreate", async (interaction) => {
                 break;
             }
 
-            case "trivia": {
-                const questions = [
-                    { question: "What is the capital of France?", answer: "Paris" },
-                    { question: "Who wrote 'Harry Potter'?", answer: "J.K. Rowling" },
-                ];
-                const trivia = questions[Math.floor(Math.random() * questions.length)];
-                await interaction.reply(`🧠 Trivia: ${trivia.question}`);
-                break;
+             case "trivia": {
+    try {
+        // Randomly choose between boolean and multiple-choice
+        const questionType = Math.random() > 0.5 ? "boolean" : "multiple";
+        const response = await fetch(`https://opentdb.com/api.php?amount=1&type=${questionType}`);
+        const data = await response.json();
+        const question = data.results[0];
+
+        let answers = [];
+        let correctAnswer = question.correct_answer;
+
+        if (questionType === "boolean") {
+            // True/False question
+            answers = ["True", "False"];
+        } else {
+            // Multiple-choice question
+            answers = [...question.incorrect_answers, question.correct_answer];
+            // Shuffle the answers
+            answers.sort(() => Math.random() - 0.5);
+        }
+
+        const triviaEmbed = new EmbedBuilder()
+            .setTitle("Trivia Time! 🎉")
+            .setDescription(`${question.question}\n\n**Options:**\n${answers.map((ans, i) => `${i + 1}. ${ans}`).join("\n")}`)
+            .setColor(0x00aaff)
+            .setFooter({ text: "You have 30 seconds to answer!" });
+
+        // Create buttons for each answer
+        const row = new ActionRowBuilder();
+        answers.forEach((answer, index) => {
+            row.addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`trivia_${index}`)
+                    .setLabel(`${index + 1}`)
+                    .setStyle(ButtonStyle.Primary)
+            );
+        });
+
+        const message = await interaction.reply({ embeds: [triviaEmbed], components: [row], fetchReply: true });
+
+        const collector = message.createMessageComponentCollector({
+            filter: i => i.user.id === interaction.user.id && i.customId.startsWith("trivia_"),
+            time: 30000 // 30 seconds
+        });
+
+        collector.on("collect", async i => {
+            const selectedIndex = parseInt(i.customId.split("_")[1]);
+            const userAnswer = answers[selectedIndex];
+            const isCorrect = userAnswer === correctAnswer;
+
+            await i.update({
+                embeds: [
+                    new EmbedBuilder()
+                        .setTitle(isCorrect ? "Correct! 🎉" : "Wrong! 😔")
+                        .setDescription(`${question.question}\n\nYour Answer: **${userAnswer}**\nCorrect Answer: **${correctAnswer}**`)
+                        .setColor(isCorrect ? 0x00ff00 : 0xff0000)
+                        .setFooter({ text: `Thanks for playing, ${i.user.tag}!` })
+                ],
+                components: []
+            });
+            collector.stop();
+        });
+
+        collector.on("end", async (collected) => {
+            if (collected.size === 0) {
+                await message.edit({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setTitle("Time’s Up! ⏰")
+                            .setDescription(`${question.question}\n\nCorrect Answer: **${correctAnswer}**`)
+                            .setColor(0xff9900)
+                            .setFooter({ text: "Better luck next time!" })
+                    ],
+                    components: []
+                });
             }
+        });
+    } catch (error) {
+        console.error("Trivia API Error:", error);
+        await interaction.reply("❌ Couldn’t fetch a trivia question right now!");
+    }
+    break;
+}
 
             case "dadjoke": {
     try {
@@ -1237,12 +1311,28 @@ client.on("interactionCreate", async (interaction) => {
             }
 
             case "translate": {
-                const text = interaction.options.getString("text");
-                const language = interaction.options.getString("language");
-                // Fetch translation from an API (not implemented here)
-                await interaction.reply(`🈳 Translation to **${language}**: [Translated text]`);
-                break;
-            }
+    const text = interaction.options.getString("text");
+    const toLang = interaction.options.getString("to") || "en";
+
+    try {
+        const result = await translate(text, { to: toLang });
+        const fromLangName = languageNames[result.from.language.iso] || result.from.language.iso;
+        const toLangName = languageNames[toLang] || toLang;
+        const translationEmbed = new EmbedBuilder()
+            .setTitle("Translation")
+            .addFields(
+                { name: "Original", value: text, inline: false },
+                { name: `Translated (${fromLangName} → ${toLangName})`, value: result.text, inline: false }
+            )
+            .setColor(0x00ff00)
+            .setFooter({ text: `Requested by ${interaction.user.tag}` });
+        await interaction.reply({ embeds: [translationEmbed] });
+    } catch (error) {
+        console.error("Translation Error:", error);
+        await interaction.reply("❌ Couldn’t translate the text—try again later!");
+    }
+    break;
+}
 
             case "ascii": {
                 const text = interaction.options.getString("text");
