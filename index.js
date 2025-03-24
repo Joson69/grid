@@ -28,6 +28,8 @@ require("dotenv").config();
 
 const { translate } = require('@vitalets/google-translate-api');
 
+const figlet = require("figlet");
+
 const languageMap = {
     english: "en",
     hindi: "hi",
