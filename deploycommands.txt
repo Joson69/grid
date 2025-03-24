@@ -17,7 +17,7 @@ const commands = [
             },
         ],
     },
-    {
+        {
         name: "warn",
         description: "Warns a user and logs the warning",
         options: [
@@ -60,9 +60,21 @@ const commands = [
         ],
     },
     {
-        name: "trivia",
-        description: "Start a random trivia question",
-    },
+    name: "trivia",
+    description: "Answer a random trivia question!",
+    options: [
+        {
+            name: "type",
+            description: "Type of question (truefalse or multiple)",
+            type: 3, // STRING
+            required: false,
+            choices: [
+                { name: "True/False", value: "boolean" },
+                { name: "Multiple Choice", value: "multiple" }
+            ]
+        }
+    ]
+},
     {
         name: "dadjoke",
         description: "Sends a random dad joke",
@@ -104,23 +116,29 @@ const commands = [
         ],
     },
     {
-        name: "translate",
-        description: "Translates a given text to another language",
-        options: [
-            {
-                name: "text",
-                type: 3,
-                description: "The text to translate",
-                required: true,
-            },
-            {
-                name: "language",
-                type: 3,
-                description: "The target language (e.g., en, fr, es)",
-                required: true,
-            },
-        ],
-    },
+    name: "translate",
+    description: "Translates a given text to another language",
+    options: [
+        {
+            name: "text",
+            type: 3,
+            description: "The text to translate",
+            required: true,
+        },
+        {
+            name: "language",
+            type: 3,
+            description: "The target language (e.g., en, fr, es)",
+            required: true,
+        },
+        {
+            name: "from",
+            type: 3,
+            description: "The source language (e.g., hi, fr, es) - optional, defaults to auto-detect",
+            required: false,
+        },
+    ],
+},
     {
         name: "ascii",
         description: "Converts text into ASCII art",
@@ -164,9 +182,77 @@ const commands = [
         ],
     },
     {
-        name: "coinflip",
-        description: "Flips a coin and returns Heads or Tails",
-    },
+    name: "coinflip",
+    description: "Flip a coin and bet on the outcome!",
+    options: [
+        {
+            name: "choice",
+            type: 3, // String
+            description: "Your choice: heads or tails",
+            required: true,
+            choices: [
+                { name: "Heads", value: "heads" },
+                { name: "Tails", value: "tails" }
+            ]
+        },
+        {
+            name: "bet",
+            type: 4, // Integer
+            description: "The amount to bet",
+            required: true,
+            min_value: 1
+        },
+    ],
+},
+    {
+    name: "balance",
+    description: "Check your virtual currency balance",
+    options: [
+        {
+            name: "user",
+            type: 6, // User
+            description: "The user to check the balance for (default: you)",
+            required: false
+        }
+    ]
+},
+    {
+    name: "leaderboard",
+    description: "Show the top users by virtual currency winnings",
+    options: [
+        {
+            name: "limit",
+            type: 4, // Integer
+            description: "Number of users to show (default: 10)",
+            required: false,
+            min_value: 1,
+            max_value: 20
+        }
+    ]
+},
+    {
+    name: "give",
+    description: "Give virtual currency to another user",
+    options: [
+        {
+            name: "user",
+            type: 6, // User
+            description: "The user to give currency to",
+            required: true
+        },
+        {
+            name: "amount",
+            type: 4, // Integer
+            description: "The amount to give",
+            required: true,
+            min_value: 1
+        }
+    ]
+},
+    {
+    name: "daily",
+    description: "Claim your daily virtual currency reward",
+},
     {
         name: "hello",
         description: "Replies with a friendly greeting!",
@@ -263,21 +349,7 @@ const commands = [
     },
     {
         name: "meme",
-        description: "Generate a simple text-based meme",
-        options: [
-            {
-                name: "top",
-                type: 3, // String type
-                description: "Text for the top of the meme",
-                required: true,
-            },
-            {
-                name: "bottom",
-                type: 3, // String type
-                description: "Text for the bottom of the meme",
-                required: true,
-            },
-        ],
+        description: "Generate a random meme from internet",
     },
     {
         name: "poll",
@@ -372,6 +444,10 @@ const commands = [
                 required: true,
             },
         ],
+    },
+    {
+        name: 'blackjack',
+        description: 'Play a game of blackjack against the bot!',
     },
     {
         name: "servericon",
