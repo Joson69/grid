@@ -116,23 +116,29 @@ const commands = [
         ],
     },
     {
-        name: "translate",
-        description: "Translates a given text to another language",
-        options: [
-            {
-                name: "text",
-                type: 3,
-                description: "The text to translate",
-                required: true,
-            },
-            {
-                name: "language",
-                type: 3,
-                description: "The target language (e.g., en, fr, es)",
-                required: true,
-            },
-        ],
-    },
+    name: "translate",
+    description: "Translates a given text to another language",
+    options: [
+        {
+            name: "text",
+            type: 3,
+            description: "The text to translate",
+            required: true,
+        },
+        {
+            name: "language",
+            type: 3,
+            description: "The target language (e.g., en, fr, es)",
+            required: true,
+        },
+        {
+            name: "from",
+            type: 3,
+            description: "The source language (e.g., hi, fr, es) - optional, defaults to auto-detect",
+            required: false,
+        },
+    ],
+},
     {
         name: "ascii",
         description: "Converts text into ASCII art",
