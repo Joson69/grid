@@ -49,7 +49,7 @@ const commands = [
     },
     {
         name: "unban",
-        description: "Unbans a user by their ID",
+        description: "Unbans a user by their user ID",
         options: [
             {
                 name: "user_id",
