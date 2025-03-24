@@ -1139,7 +1139,7 @@ client.on("interactionCreate", async (interaction) => {
     const suits = ['S', 'H', 'C', 'D'];
     const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
-    // Map of card values and suits to custom emojis
+    // Emoji mapping for all 52 cards
     const emojiMap = {
         // Spades (S)
         'card_2S': '<:card_2S:1353687787576098886>',
@@ -1158,7 +1158,7 @@ client.on("interactionCreate", async (interaction) => {
 
         // Hearts (H)
         'card_2H': '<:card_2H:1353687774137548891>',
-        'card_3H': '<:card_3H:1353687826809753600>',
+        'card_3H': '<:card_2H:1353687774137548891>', // Placeholder: Replace with actual 3H emoji
         'card_4H': '<:card_4H:1353687885995315270>',
         'card_5H': '<:card_5H:1353687946544549939>',
         'card_6H': '<:card_6H:1353688024470257724>',
@@ -1233,12 +1233,21 @@ client.on("interactionCreate", async (interaction) => {
         return value;
     }
 
-    function displayHand(hand, hideFirst = false) {
-        return hand.map((card, index) => {
-            if (hideFirst && index === 1) return emojiMap['BACK'];
-            const cardKey = `${card.value}${card.suit}`;
-            return emojiMap[cardKey] || '🃏'; // Fallback to a default card emoji if not found
-        }).join(' ');
+    function getCardEmoji(card) {
+        const { value, suit } = card;
+        const cardName = `card_${value}${suit}`;
+        return emojiMap[cardName] || `${value}${suit}`; // Fallback to plain text if emoji not found
+    }
+
+    // Updated displayHand to show cards in a grid-like format
+    function displayHand(hand) {
+        return hand.map((card, index) => `${index + 1}. ${getCardEmoji(card)}`).join('\n');
+    }
+
+    // Function to get text description of cards
+    function getHandText(hand) {
+        const suitNames = { S: 'Spades', H: 'Hearts', D: 'Diamonds', C: 'Clubs' };
+        return hand.map(card => `${card.value} of ${suitNames[card.suit]}`).join(', ');
     }
 
     let deck = shuffleDeck(createDeck());
@@ -1251,7 +1260,8 @@ client.on("interactionCreate", async (interaction) => {
         .setTitle('♠ Blackjack Game ♣')
         .addFields(
             { name: 'Your Hand', value: `${displayHand(playerHand)}\n**Value:** ${playerValue}`, inline: false },
-            { name: 'Dealer\'s Hand', value: `${displayHand(dealerHand, true)}\n**Value:** ${calculateHandValue([dealerHand[0]])} (one card hidden)`, inline: false },
+            { name: 'Cards', value: getHandText(playerHand), inline: false },
+            { name: 'Dealer\'s Hand', value: `${getCardEmoji(dealerHand[0])}, [Hidden]`, inline: false },
             { name: 'Action', value: '🃏 Click **Hit** to draw a card, or ✋ **Stand** to hold your hand!', inline: false }
         )
         .setColor('#0099ff');
@@ -1282,21 +1292,21 @@ client.on("interactionCreate", async (interaction) => {
             if (playerValue > 21) {
                 embed.setFields(
                     { name: 'Your Hand', value: `${displayHand(playerHand)}\n**Bust! 💀**`, inline: false },
+                    { name: 'Cards', value: getHandText(playerHand), inline: false },
                     { name: 'Dealer\'s Hand', value: `${displayHand(dealerHand)}\n**Value:** ${dealerValue}`, inline: false },
                     { name: 'Result', value: '**You went over 21! You lose!**', inline: false }
                 ).setColor('#FF0000');
 
-                await i.update({ embeds: [embed], components: [] });
                 collector.stop();
             } else {
                 embed.setFields(
                     { name: 'Your Hand', value: `${displayHand(playerHand)}\n**Value:** ${playerValue}`, inline: false },
-                    { name: 'Dealer\'s Hand', value: `${displayHand(dealerHand, true)}\n**Value:** ${calculateHandValue([dealerHand[0]])} (one card hidden)`, inline: false },
+                    { name: 'Cards', value: getHandText(playerHand), inline: false },
+                    { name: 'Dealer\'s Hand', value: `${getCardEmoji(dealerHand[0])}, [Hidden]`, inline: false },
                     { name: 'Action', value: '🃏 Click **Hit** to draw a card, or ✋ **Stand** to hold your hand!', inline: false }
                 );
-
-                await i.update({ embeds: [embed], components: [row] });
             }
+            await i.update({ embeds: [embed], components: [row] });
         } else if (i.customId === 'stand') {
             while (dealerValue < 17) {
                 dealerHand.push(deck.pop());
@@ -1310,6 +1320,7 @@ client.on("interactionCreate", async (interaction) => {
 
             embed.setFields(
                 { name: 'Your Hand', value: `${displayHand(playerHand)}\n**Value:** ${playerValue}`, inline: false },
+                { name: 'Cards', value: getHandText(playerHand), inline: false },
                 { name: 'Dealer\'s Hand', value: `${displayHand(dealerHand)}\n**Value:** ${dealerValue}`, inline: false },
                 { name: 'Result', value: result, inline: false }
             ).setColor(dealerValue > 21 || playerValue > dealerValue ? '#00FF00' : '#FF0000');
