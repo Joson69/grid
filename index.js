@@ -30,6 +30,30 @@ const { translate } = require('@vitalets/google-translate-api');
 
 const figlet = require("figlet");
 
+const { createCanvas, loadImage } = require('canvas');
+
+const fs = require('fs');
+
+// Load currency data
+let currencyData = {};
+if (fs.existsSync('currency.json')) {
+    currencyData = JSON.parse(fs.readFileSync('currency.json', 'utf8'));
+}
+
+// Function to save currency data
+function saveCurrencyData() {
+    fs.writeFileSync('currency.json', JSON.stringify(currencyData, null, 2));
+}
+
+// Function to get user's currency
+function getUserCurrency(userId) {
+    if (!currencyData[userId]) {
+        currencyData[userId] = { pocket: 10000, winnings: 0, lastDaily: 0 }; // Added lastDaily for /daily
+        saveCurrencyData();
+    }
+    return currencyData[userId];
+};
+
 const languageMap = {
     english: "en",
     hindi: "hi",
@@ -150,10 +174,54 @@ client.on("interactionCreate", async (interaction) => {
             }
 
             case "coinflip": {
-                const result = Math.random() < 0.5 ? "Heads 🪙" : "Tails 🪙";
-                await interaction.reply(`The coin landed on: **${result}**`);
-                break;
-            }
+    const choice = interaction.options.getString("choice").toLowerCase();
+    const bet = interaction.options.getInteger("bet");
+
+    // Get user's currency
+    const userId = interaction.user.id;
+    const userCurrency = getUserCurrency(userId);
+
+    // Check if user has enough currency
+    if (userCurrency.pocket < bet) {
+        return interaction.reply({
+            content: `❌ You don’t have enough currency to place this bet! Your pocket: ${userCurrency.pocket}`,
+            flags: InteractionResponseFlags.Ephemeral
+        });
+    }
+
+    // Deduct the bet
+    userCurrency.pocket -= bet;
+
+    // Flip the coin
+    const result = Math.random() < 0.5 ? "heads" : "tails";
+    const won = choice === result;
+    let payout = 0;
+
+    if (won) {
+        payout = bet * 2;
+        userCurrency.pocket += payout;
+        userCurrency.winnings += bet;
+    } else {
+        userCurrency.winnings -= bet;
+    }
+    saveCurrencyData();
+
+    const embed = new EmbedBuilder()
+        .setTitle('🪙 Coin Flip')
+        .addFields(
+            { name: 'Your Choice', value: choice.charAt(0).toUpperCase() + choice.slice(1), inline: true },
+            { name: 'Result', value: result.charAt(0).toUpperCase() + result.slice(1), inline: true },
+            { name: 'Outcome', value: won ? 'You Win! 🎉' : 'You Lose! 😔', inline: false },
+            { name: 'Payout', value: payout.toLocaleString(), inline: true },
+            { name: 'Pocket', value: userCurrency.pocket.toLocaleString(), inline: true },
+            { name: 'Winnings', value: userCurrency.winnings.toLocaleString(), inline: true },
+            { name: 'Net', value: (userCurrency.pocket + userCurrency.winnings - 10000).toLocaleString(), inline: true }
+        )
+        .setColor(won ? '#00FF00' : '#FF0000');
+
+    await interaction.reply({ embeds: [embed] });
+    break;
+}
 
             case "hello": {
                 await interaction.reply("Hey there! 👋");
@@ -543,106 +611,126 @@ client.on("interactionCreate", async (interaction) => {
             }
 
             case "help": {
-                const commandName = interaction.options.getString("command")?.toLowerCase();
-                const commands = [
-                    "avatar", "ban", "clear", "coinflip", "hello", "kick", "mute", "poll", "remind",
-                    "serverinfo", "userinfo", "membercount", "uptime", "ping", "say", "roleinfo",
-                    "emojiinfo", "servericon", "nickname", "emojiadd", "emojiremove", "weather",
-                    "lock", "unlock", "slowmode", "purge", "invite", "stats", "quote", "rps", "random",
-                    "8ball", "meme"
-                ];
+    const commandName = interaction.options.getString("command")?.toLowerCase();
+    const commands = [
+        "avatar", "ban", "clear", "coinflip", "hello", "kick", "mute", "poll", "remind",
+        "serverinfo", "userinfo", "membercount", "uptime", "ping", "say", "roleinfo",
+        "emojiinfo", "servericon", "nickname", "emojiadd", "emojiremove", "weather",
+        "lock", "unlock", "slowmode", "purge", "invite", "stats", "quote", "rps", "random",
+        "8ball", "meme", "warn", "warns", "unban", "trivia", "dadjoke", "define", "convert",
+        "translate", "ascii", "blackjack", "balance", "leaderboard", "give", "daily"
+    ];
 
-                if (commandName) {
-                    const command = commands.find((cmd) => cmd === commandName);
-                    if (!command) {
-                        return interaction.reply({
-                            content: "❌ Command not found!",
-                            flags: [InteractionResponseFlags.Ephemeral],
-                        });
-                    }
-                    const commandInfo = {
-                        avatar: "Displays a user's profile picture.",
-                        ban: "Bans a user from the server with an optional reason.",
-                        clear: "Deletes a specified number of messages (1-100).",
-                        coinflip: "Flips a coin, returning Heads or Tails.",
-                        hello: "Replies with a friendly greeting.",
-                        kick: "Kicks a user from the server with an optional reason.",
-                        mute: "Mutes a user for a specified time (minutes) with an optional reason.",
-                        poll: "Creates a poll with a yes/no vote.",
-                        remind: "Sets a reminder to DM you after a specified time (minutes).",
-                        serverinfo: "Shows detailed information about the server.",
-                        userinfo: "Shows information about a user.",
-                        membercount: "Displays the number of humans and bots in the server.",
-                        uptime: "Shows how long the bot has been running.",
-                        ping: "Displays the bot’s latency.",
-                        say: "Makes the bot repeat a message.",
-                        roleinfo: "Provides information about a role.",
-                        emojiinfo: "Displays details about an emoji.",
-                        servericon: "Displays the server’s icon.",
-                        nickname: "Changes a user’s nickname.",
-                        emojiadd: "Adds an emoji to the server using a name and URL.",
-                        emojiremove: "Removes an emoji from the server.",
-                        weather: "Gets the current weather for a city.",
-                        lock: "Locks a text channel for @everyone.",
-                        unlock: "Unlocks a text channel for @everyone.",
-                        slowmode: "Sets slowmode for a text channel.",
-                        purge: "Deletes a number of messages from the channel (1-100).",
-                        invite: "Generates an invite link for the bot or server.",
-                        stats: "Displays bot statistics and performance metrics.",
-                        quote: "Quotes a message by ID.",
-                        rps: "Play Rock, Paper, Scissors with the bot.",
-                        random: "Generates a random number between two values.",
-                        "8ball": "Ask the Magic 8-Ball a question.",
-                        meme: "Generates a simple text-based meme."
-                    };
-                    const helpEmbed = new EmbedBuilder()
-                        .setTitle(`ℹ️ Help: /${commandName}`)
-                        .setDescription(commandInfo[command])
-                        .setColor(0x3498db)
-                        .setFooter({
-                            text: `Requested by ${interaction.user.tag}`,
-                            iconURL: interaction.user.displayAvatarURL(),
-                        })
-                        .setTimestamp();
-                    await interaction.reply({ embeds: [helpEmbed] });
-                } else {
-                    const helpEmbed = new EmbedBuilder()
-                        .setTitle("📜 Bot Commands")
-                        .setDescription(
-                            "Here’s a list of all available commands. Use `/help <command>` for details:"
-                        )
-                        .addFields(
-                            {
-                                name: "Moderation",
-                                value: "ban, kick, mute, clear, lock, unlock, slowmode, purge, nickname",
-                                inline: true,
-                            },
-                            {
-                                name: "Info",
-                                value: "serverinfo, userinfo, membercount, uptime, ping, roleinfo, emojiinfo, servericon, stats",
-                                inline: true,
-                            },
-                            {
-                                name: "Fun",
-                                value: "coinflip, hello, poll, say, rps, random, 8ball, meme",
-                                inline: true,
-                            },
-                            {
-                                name: "Utility",
-                                value: "avatar, remind, weather, emojiadd, emojiremove, invite, quote",
-                                inline: true,
-                            }
-                        )
-                        .setColor(0x3498db)
-                        .setFooter({
-                            text: `Requested by ${interaction.user.tag}`,
-                            iconURL: interaction.user.displayAvatarURL(),
-                        })
-                        .setTimestamp();
-                    await interaction.reply({ embeds: [helpEmbed] });
+    if (commandName) {
+        const command = commands.find((cmd) => cmd === commandName);
+        if (!command) {
+            return interaction.reply({
+                content: "❌ Command not found!",
+                flags: [InteractionResponseFlags.Ephemeral],
+            });
+        }
+        const commandInfo = {
+            avatar: "Displays a user's profile picture.",
+            ban: "Bans a user from the server with an optional reason.",
+            clear: "Deletes a specified number of messages (1-100).",
+            coinflip: "Flips a coin and bets on the outcome (heads or tails).",
+            hello: "Replies with a friendly greeting.",
+            kick: "Kicks a user from the server with an optional reason.",
+            mute: "Mutes a user for a specified time (minutes) with an optional reason.",
+            poll: "Creates a poll with a yes/no vote.",
+            remind: "Sets a reminder to DM you after a specified time (minutes).",
+            serverinfo: "Shows detailed information about the server.",
+            userinfo: "Shows information about a user.",
+            membercount: "Displays the number of humans and bots in the server.",
+            uptime: "Shows how long the bot has been running.",
+            ping: "Displays the bot’s latency.",
+            say: "Makes the bot repeat a message.",
+            roleinfo: "Provides information about a role.",
+            emojiinfo: "Displays details about an emoji.",
+            servericon: "Displays the server’s icon.",
+            nickname: "Changes a user’s nickname.",
+            emojiadd: "Adds an emoji to the server using a name and URL.",
+            emojiremove: "Removes an emoji from the server.",
+            weather: "Gets the current weather for a city.",
+            lock: "Locks a text channel for @everyone.",
+            unlock: "Unlocks a text channel for @everyone.",
+            slowmode: "Sets slowmode for a text channel.",
+            purge: "Deletes a number of messages from the channel (1-100).",
+            invite: "Generates an invite link for the bot or server.",
+            stats: "Displays bot statistics and performance metrics.",
+            quote: "Quotes a message by ID.",
+            rps: "Play Rock, Paper, Scissors with the bot.",
+            random: "Generates a random number between two values.",
+            "8ball": "Ask the Magic 8-Ball a question.",
+            meme: "Fetches a random meme from the internet.",
+            warn: "Warns a user and logs the warning.",
+            warns: "Shows the number of warnings a user has.",
+            unban: "Unbans a user by their ID.",
+            trivia: "Answer a random trivia question and earn currency!",
+            dadjoke: "Sends a random dad joke.",
+            define: "Fetches the definition of a word.",
+            convert: "Converts units (e.g., cm to inches, USD to EUR).",
+            translate: "Translates text to another language.",
+            ascii: "Converts text into ASCII art.",
+            blackjack: "Play a game of blackjack against the bot.",
+            balance: "Check your virtual currency balance.",
+            leaderboard: "Show the top users by virtual currency winnings.",
+            give: "Give virtual currency to another user.",
+            daily: "Claim your daily virtual currency reward."
+        };
+        const helpEmbed = new EmbedBuilder()
+            .setTitle(`ℹ️ Help: /${commandName}`)
+            .setDescription(commandInfo[command])
+            .setColor(0x3498db)
+            .setFooter({
+                text: `Requested by ${interaction.user.tag}`,
+                iconURL: interaction.user.displayAvatarURL(),
+            })
+            .setTimestamp();
+        await interaction.reply({ embeds: [helpEmbed] });
+    } else {
+        const helpEmbed = new EmbedBuilder()
+            .setTitle("📜 Bot Commands")
+            .setDescription(
+                "Here’s a list of all available commands. Use `/help <command>` for details:"
+            )
+            .addFields(
+                {
+                    name: "Moderation",
+                    value: "ban, kick, mute, clear, lock, unlock, slowmode, purge, nickname, warn, warns, unban",
+                    inline: true,
+                },
+                {
+                    name: "Info",
+                    value: "serverinfo, userinfo, membercount, uptime, ping, roleinfo, emojiinfo, servericon, stats",
+                    inline: true,
+                },
+                {
+                    name: "Fun",
+                    value: "coinflip, hello, poll, say, rps, random, 8ball, meme, trivia, dadjoke, blackjack",
+                    inline: true,
+                },
+                {
+                    name: "Utility",
+                    value: "avatar, remind, weather, emojiadd, emojiremove, invite, quote, define, convert, translate, ascii",
+                    inline: true,
+                },
+                {
+                    name: "Economy",
+                    value: "balance, leaderboard, give, daily",
+                    inline: true,
                 }
-                break;
-            }
+            )
+            .setColor(0x3498db)
+            .setFooter({
+                text: `Requested by ${interaction.user.tag}`,
+                iconURL: interaction.user.displayAvatarURL(),
+            })
+            .setTimestamp();
+        await interaction.reply({ embeds: [helpEmbed] });
+    }
+    break;
+}
 
             case "invite": {
                 const inviteType = interaction.options.getString("type") || "bot";
@@ -1034,7 +1122,9 @@ client.on("interactionCreate", async (interaction) => {
                 });
                 break;
             }
-                case "blackjack": {
+
+
+case "blackjack": {
     if (!interaction.channel) return;
 
     const suits = ['S', 'H', 'C', 'D'];
@@ -1059,7 +1149,7 @@ client.on("interactionCreate", async (interaction) => {
 
         // Hearts (H)
         'card_2H': '<:card_2H:1353687774137548891>',
-        'card_3H': '<:card_3H:1353687826809753600>', // Placeholder: Replace with actual 3H emoji
+        'card_3H': '<:card_3H:1353687826809753600>',
         'card_4H': '<:card_4H:1353687885995315270>',
         'card_5H': '<:card_5H:1353687946544549939>',
         'card_6H': '<:card_6H:1353688024470257724>',
@@ -1103,6 +1193,11 @@ client.on("interactionCreate", async (interaction) => {
         'card_AC': '<:card_AC:1353688438125367318>',
     };
 
+    // Map to get emoji IDs from emoji strings
+    const emojiIdMap = Object.fromEntries(
+        Object.entries(emojiMap).map(([key, value]) => [key, value.match(/:(\d+)>/)[1]])
+    );
+
     function createDeck() {
         return suits.flatMap(suit => values.map(value => ({ value, suit })));
     }
@@ -1137,33 +1232,116 @@ client.on("interactionCreate", async (interaction) => {
     function getCardEmoji(card) {
         const { value, suit } = card;
         const cardName = `card_${value}${suit}`;
-        return emojiMap[cardName] || `${value}${suit}`; // Fallback to plain text if emoji not found
+        return emojiMap[cardName] || `${value}${suit}`;
     }
 
-    // Updated displayHand to show cards in a grid-like format
-    function displayHand(hand) {
-        return hand.map((card, index) => `${index + 1}. ${getCardEmoji(card)}`).join('\n');
-    }
-
-    // Function to get text description of cards
     function getHandText(hand) {
         const suitNames = { S: 'Spades', H: 'Hearts', D: 'Diamonds', C: 'Clubs' };
         return hand.map(card => `${card.value} of ${suitNames[card.suit]}`).join(', ');
     }
 
+    async function generateHandImage(playerHand, dealerHand, showDealer = false) {
+        const cardWidth = 100;
+        const cardHeight = 150;
+        const padding = 10;
+        const maxCards = Math.max(playerHand.length, dealerHand.length);
+        const canvasWidth = maxCards * (cardWidth + padding) - padding;
+        const canvasHeight = (cardHeight + padding) * 2;
+
+        const canvas = createCanvas(canvasWidth, canvasHeight);
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+        for (let i = 0; i < playerHand.length; i++) {
+            const card = playerHand[i];
+            const cardName = `card_${card.value}${card.suit}`;
+            const emojiId = emojiIdMap[cardName];
+            const imageUrl = `https://cdn.discordapp.com/emojis/${emojiId}.png`;
+
+            try {
+                const cardImage = await loadImage(imageUrl);
+                ctx.drawImage(cardImage, i * (cardWidth + padding), 0, cardWidth, cardHeight);
+            } catch (error) {
+                console.error(`Failed to load image for ${cardName}:`, error);
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(i * (cardWidth + padding), 0, cardWidth, cardHeight);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '20px Arial';
+                ctx.fillText('Error', i * (cardWidth + padding) + 20, 75);
+            }
+        }
+
+        for (let i = 0; i < dealerHand.length; i++) {
+            if (i === 1 && !showDealer) {
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(i * (cardWidth + padding), cardHeight + padding, cardWidth, cardHeight);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '20px Arial';
+                ctx.fillText('Hidden', i * (cardWidth + padding) + 20, cardHeight + padding + 75);
+            } else {
+                const card = dealerHand[i];
+                const cardName = `card_${card.value}${card.suit}`;
+                const emojiId = emojiIdMap[cardName];
+                const imageUrl = `https://cdn.discordapp.com/emojis/${emojiId}.png`;
+
+                try {
+                    const cardImage = await loadImage(imageUrl);
+                    ctx.drawImage(cardImage, i * (cardWidth + padding), cardHeight + padding, cardWidth, cardHeight);
+                } catch (error) {
+                    console.error(`Failed to load image for ${cardName}:`, error);
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fillRect(i * (cardWidth + padding), cardHeight + padding, cardWidth, cardHeight);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '20px Arial';
+                    ctx.fillText('Error', i * (cardWidth + padding) + 20, cardHeight + padding + 75);
+                }
+            }
+        }
+
+        return canvas.toBuffer('image/png');
+    }
+
+    // Initialize game state
     let deck = shuffleDeck(createDeck());
     let playerHand = [deck.pop(), deck.pop()];
     let dealerHand = [deck.pop(), deck.pop()];
     let playerValue = calculateHandValue(playerHand);
     let dealerValue = calculateHandValue(dealerHand);
+    let bet = 1000; // Default bet
+    let doubledDown = false;
+
+    // Get user's currency
+    const userId = interaction.user.id;
+    const userCurrency = getUserCurrency(userId);
+
+    // Check if user has enough currency to bet
+    if (userCurrency.pocket < bet) {
+        return interaction.reply({
+            content: "❌ You don’t have enough currency to place this bet! Your pocket: " + userCurrency.pocket,
+            flags: InteractionResponseFlags.Ephemeral
+        });
+    }
+
+    // Deduct the bet from the user's pocket
+    userCurrency.pocket -= bet;
+    saveCurrencyData();
+
+    // Generate the initial hand image
+    let handImageBuffer = await generateHandImage(playerHand, dealerHand);
 
     const embed = new EmbedBuilder()
         .setTitle('♠ Blackjack Game ♣')
+        .setImage('attachment://hand.png')
         .addFields(
-            { name: 'Your Hand', value: `${displayHand(playerHand)}\n**Value:** ${playerValue}`, inline: false },
-            { name: 'Cards', value: getHandText(playerHand), inline: false },
-            { name: 'Dealer\'s Hand', value: `${getCardEmoji(dealerHand[0])}, [Hidden]`, inline: false },
-            { name: 'Action', value: '🃏 Click **Hit** to draw a card, or ✋ **Stand** to hold your hand!', inline: false }
+            { name: 'Pocket', value: userCurrency.pocket.toLocaleString(), inline: true },
+            { name: 'Winnings', value: userCurrency.winnings.toLocaleString(), inline: true },
+            { name: 'Net', value: (userCurrency.pocket + userCurrency.winnings - 10000).toLocaleString(), inline: true },
+            { name: 'Bet', value: bet.toLocaleString(), inline: true },
+            { name: 'Your Hand', value: `**Value:** ${playerValue}\n${getHandText(playerHand)}`, inline: false },
+            { name: 'Dealer\'s Hand', value: 'One card hidden', inline: false },
+            { name: 'Action', value: '🃏 Click **Hit** to draw a card, ✋ **Stand** to hold, or ⏫ **Double Down** to double your bet and draw one more card!', inline: false }
         )
         .setColor('#0099ff');
 
@@ -1176,57 +1354,170 @@ client.on("interactionCreate", async (interaction) => {
             new ButtonBuilder()
                 .setCustomId('stand')
                 .setLabel('✋ Stand')
-                .setStyle(ButtonStyle.Secondary)
+                .setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
+                .setCustomId('double')
+                .setLabel('⏫ Double Down')
+                .setStyle(ButtonStyle.Success)
+                .setDisabled(userCurrency.pocket < bet || playerHand.length !== 2) // Disable if not enough currency or not the first turn
         );
 
-    await interaction.reply({ embeds: [embed], components: [row] });
+    await interaction.reply({
+        embeds: [embed],
+        components: [row],
+        files: [{ attachment: handImageBuffer, name: 'hand.png' }]
+    });
     const message = await interaction.fetchReply();
 
     const filter = i => i.user.id === interaction.user.id;
     const collector = message.createMessageComponentCollector({ filter, time: 60000 });
 
     collector.on('collect', async i => {
-        if (i.customId === 'hit') {
+        if (i.customId === 'hit' || i.customId === 'double') {
+            if (i.customId === 'double') {
+                // Double the bet and deduct from pocket
+                if (userCurrency.pocket < bet) {
+                    await i.update({
+                        embeds: [embed.setFields(
+                            { name: 'Pocket', value: userCurrency.pocket.toLocaleString(), inline: true },
+                            { name: 'Winnings', value: userCurrency.winnings.toLocaleString(), inline: true },
+                            { name: 'Net', value: (userCurrency.pocket + userCurrency.winnings - 10000).toLocaleString(), inline: true },
+                            { name: 'Bet', value: bet.toLocaleString(), inline: true },
+                            { name: 'Your Hand', value: `**Value:** ${playerValue}\n${getHandText(playerHand)}`, inline: false },
+                            { name: 'Dealer\'s Hand', value: 'One card hidden', inline: false },
+                            { name: 'Action', value: '❌ Not enough currency to double down!', inline: false }
+                        )],
+                        components: [row]
+                    });
+                    return;
+                }
+                userCurrency.pocket -= bet;
+                bet *= 2;
+                doubledDown = true;
+            }
+
             playerHand.push(deck.pop());
             playerValue = calculateHandValue(playerHand);
 
-            if (playerValue > 21) {
-                embed.setFields(
-                    { name: 'Your Hand', value: `${displayHand(playerHand)}\n**Bust! 💀**`, inline: false },
-                    { name: 'Cards', value: getHandText(playerHand), inline: false },
-                    { name: 'Dealer\'s Hand', value: `${displayHand(dealerHand)}\n**Value:** ${dealerValue}`, inline: false },
-                    { name: 'Result', value: '**You went over 21! You lose!**', inline: false }
-                ).setColor('#FF0000');
+            let updatedImageBuffer = await generateHandImage(playerHand, dealerHand);
 
+            if (playerValue > 21 || doubledDown) {
+                // If doubled down, end the turn after drawing one card
+                while (dealerValue < 17) {
+                    dealerHand.push(deck.pop());
+                    dealerValue = calculateHandValue(dealerHand);
+                }
+
+                let result;
+                let payout = 0;
+                if (playerValue > 21) {
+                    result = '**You went over 21! You lose!**';
+                } else if (dealerValue > 21) {
+                    result = '**Dealer Busts! You Win! 🎉**';
+                    payout = bet * 2;
+                } else if (playerValue > dealerValue) {
+                    result = '**You Win! 🎉**';
+                    payout = bet * 2;
+                } else if (dealerValue > playerValue) {
+                    result = '**Dealer Wins! 😔**';
+                } else {
+                    result = '**It\'s a Tie! 🤝**';
+                    payout = bet;
+                }
+
+                // Update currency
+                userCurrency.pocket += payout;
+                userCurrency.winnings += payout - bet;
+                saveCurrencyData();
+
+                updatedImageBuffer = await generateHandImage(playerHand, dealerHand, true);
+                embed.setFields(
+                    { name: 'Pocket', value: userCurrency.pocket.toLocaleString(), inline: true },
+                    { name: 'Winnings', value: userCurrency.winnings.toLocaleString(), inline: true },
+                    { name: 'Net', value: (userCurrency.pocket + userCurrency.winnings - 10000).toLocaleString(), inline: true },
+                    { name: 'Bet', value: bet.toLocaleString(), inline: true },
+                    { name: 'Your Hand', value: `**Value:** ${playerValue}\n${getHandText(playerHand)}`, inline: false },
+                    { name: 'Dealer\'s Hand', value: `**Value:** ${dealerValue}\n${getHandText(dealerHand)}`, inline: false },
+                    { name: 'Result', value: result, inline: false }
+                ).setColor(payout > bet ? '#00FF00' : '#FF0000');
+
+                await i.update({
+                    embeds: [embed],
+                    components: [],
+                    files: [{ attachment: updatedImageBuffer, name: 'hand.png' }]
+                });
                 collector.stop();
             } else {
                 embed.setFields(
-                    { name: 'Your Hand', value: `${displayHand(playerHand)}\n**Value:** ${playerValue}`, inline: false },
-                    { name: 'Cards', value: getHandText(playerHand), inline: false },
-                    { name: 'Dealer\'s Hand', value: `${getCardEmoji(dealerHand[0])}, [Hidden]`, inline: false },
+                    { name: 'Pocket', value: userCurrency.pocket.toLocaleString(), inline: true },
+                    { name: 'Winnings', value: userCurrency.winnings.toLocaleString(), inline: true },
+                    { name: 'Net', value: (userCurrency.pocket + userCurrency.winnings - 10000).toLocaleString(), inline: true },
+                    { name: 'Bet', value: bet.toLocaleString(), inline: true },
+                    { name: 'Your Hand', value: `**Value:** ${playerValue}\n${getHandText(playerHand)}`, inline: false },
+                    { name: 'Dealer\'s Hand', value: 'One card hidden', inline: false },
                     { name: 'Action', value: '🃏 Click **Hit** to draw a card, or ✋ **Stand** to hold your hand!', inline: false }
                 );
+
+                const updatedRow = new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('hit')
+                            .setLabel('🃏 Hit')
+                            .setStyle(ButtonStyle.Primary),
+                        new ButtonBuilder()
+                            .setCustomId('stand')
+                            .setLabel('✋ Stand')
+                            .setStyle(ButtonStyle.Secondary)
+                    );
+
+                await i.update({
+                    embeds: [embed],
+                    components: [updatedRow],
+                    files: [{ attachment: updatedImageBuffer, name: 'hand.png' }]
+                });
             }
-            await i.update({ embeds: [embed], components: [row] });
         } else if (i.customId === 'stand') {
             while (dealerValue < 17) {
                 dealerHand.push(deck.pop());
                 dealerValue = calculateHandValue(dealerHand);
             }
 
-            let result = dealerValue > 21 ? '**Dealer Busts! You Win! 🎉**' :
-                playerValue > dealerValue ? '**You Win! 🎉**' :
-                dealerValue > playerValue ? '**Dealer Wins! 😔**' :
-                '**It\'s a Tie! 🤝**';
+            let result;
+            let payout = 0;
+            if (dealerValue > 21) {
+                result = '**Dealer Busts! You Win! 🎉**';
+                payout = bet * 2;
+            } else if (playerValue > dealerValue) {
+                result = '**You Win! 🎉**';
+                payout = bet * 2;
+            } else if (dealerValue > playerValue) {
+                result = '**Dealer Wins! 😔**';
+            } else {
+                result = '**It\'s a Tie! 🤝**';
+                payout = bet;
+            }
 
+            // Update currency
+            userCurrency.pocket += payout;
+            userCurrency.winnings += payout - bet;
+            saveCurrencyData();
+
+            const updatedImageBuffer = await generateHandImage(playerHand, dealerHand, true);
             embed.setFields(
-                { name: 'Your Hand', value: `${displayHand(playerHand)}\n**Value:** ${playerValue}`, inline: false },
-                { name: 'Cards', value: getHandText(playerHand), inline: false },
-                { name: 'Dealer\'s Hand', value: `${displayHand(dealerHand)}\n**Value:** ${dealerValue}`, inline: false },
+                { name: 'Pocket', value: userCurrency.pocket.toLocaleString(), inline: true },
+                { name: 'Winnings', value: userCurrency.winnings.toLocaleString(), inline: true },
+                { name: 'Net', value: (userCurrency.pocket + userCurrency.winnings - 10000).toLocaleString(), inline: true },
+                { name: 'Bet', value: bet.toLocaleString(), inline: true },
+                { name: 'Your Hand', value: `**Value:** ${playerValue}\n${getHandText(playerHand)}`, inline: false },
+                { name: 'Dealer\'s Hand', value: `**Value:** ${dealerValue}\n${getHandText(dealerHand)}`, inline: false },
                 { name: 'Result', value: result, inline: false }
-            ).setColor(dealerValue > 21 || playerValue > dealerValue ? '#00FF00' : '#FF0000');
+            ).setColor(payout > bet ? '#00FF00' : '#FF0000');
 
-            await i.update({ embeds: [embed], components: [] });
+            await i.update({
+                embeds: [embed],
+                components: [],
+                files: [{ attachment: updatedImageBuffer, name: 'hand.png' }]
+            });
             collector.stop();
         }
     });
@@ -1268,8 +1559,7 @@ client.on("interactionCreate", async (interaction) => {
 
              case "trivia": {
     try {
-        // Randomly choose between boolean and multiple-choice
-        const questionType = Math.random() > 0.5 ? "boolean" : "multiple";
+        const questionType = interaction.options.getString("type") || (Math.random() > 0.5 ? "boolean" : "multiple");
         const response = await fetch(`https://opentdb.com/api.php?amount=1&type=${questionType}`);
         const data = await response.json();
         const question = data.results[0];
@@ -1278,12 +1568,9 @@ client.on("interactionCreate", async (interaction) => {
         let correctAnswer = question.correct_answer;
 
         if (questionType === "boolean") {
-            // True/False question
             answers = ["True", "False"];
         } else {
-            // Multiple-choice question
             answers = [...question.incorrect_answers, question.correct_answer];
-            // Shuffle the answers
             answers.sort(() => Math.random() - 0.5);
         }
 
@@ -1291,9 +1578,8 @@ client.on("interactionCreate", async (interaction) => {
             .setTitle("Trivia Time! 🎉")
             .setDescription(`${question.question}\n\n**Options:**\n${answers.map((ans, i) => `${i + 1}. ${ans}`).join("\n")}`)
             .setColor(0x00aaff)
-            .setFooter({ text: "You have 30 seconds to answer!" });
+            .setFooter({ text: "You have 30 seconds to answer! Correct answer: +500 currency" });
 
-        // Create buttons for each answer
         const row = new ActionRowBuilder();
         answers.forEach((answer, index) => {
             row.addComponents(
@@ -1308,7 +1594,7 @@ client.on("interactionCreate", async (interaction) => {
 
         const collector = message.createMessageComponentCollector({
             filter: i => i.user.id === interaction.user.id && i.customId.startsWith("trivia_"),
-            time: 30000 // 30 seconds
+            time: 30000
         });
 
         collector.on("collect", async i => {
@@ -1316,11 +1602,25 @@ client.on("interactionCreate", async (interaction) => {
             const userAnswer = answers[selectedIndex];
             const isCorrect = userAnswer === correctAnswer;
 
+            // Update currency if correct
+            const userCurrency = getUserCurrency(interaction.user.id);
+            let reward = 0;
+            if (isCorrect) {
+                reward = 500;
+                userCurrency.pocket += reward;
+                userCurrency.winnings += reward;
+                saveCurrencyData();
+            }
+
             await i.update({
                 embeds: [
                     new EmbedBuilder()
                         .setTitle(isCorrect ? "Correct! 🎉" : "Wrong! 😔")
-                        .setDescription(`${question.question}\n\nYour Answer: **${userAnswer}**\nCorrect Answer: **${correctAnswer}**`)
+                        .setDescription(`${question.question}\n\nYour Answer: **${userAnswer}**\nCorrect Answer: **${correctAnswer}**${isCorrect ? `\n\n**Reward:** +${reward} currency` : ''}`)
+                        .addFields(
+                            { name: 'Pocket', value: userCurrency.pocket.toLocaleString(), inline: true },
+                            { name: 'Winnings', value: userCurrency.winnings.toLocaleString(), inline: true }
+                        )
                         .setColor(isCorrect ? 0x00ff00 : 0xff0000)
                         .setFooter({ text: `Thanks for playing, ${i.user.tag}!` })
                 ],
@@ -1347,6 +1647,84 @@ client.on("interactionCreate", async (interaction) => {
         console.error("Trivia API Error:", error);
         await interaction.reply("❌ Couldn’t fetch a trivia question right now!");
     }
+    break;
+}
+            case "give": {
+    const targetUser = interaction.options.getUser("user");
+    const amount = interaction.options.getInteger("amount");
+
+    if (targetUser.id === interaction.user.id) {
+        return interaction.reply({
+            content: "❌ You can’t give currency to yourself!",
+            flags: InteractionResponseFlags.Ephemeral
+        });
+    }
+
+    const senderCurrency = getUserCurrency(interaction.user.id);
+    if (senderCurrency.pocket < amount) {
+        return interaction.reply({
+            content: `❌ You don’t have enough currency to give! Your pocket: ${senderCurrency.pocket}`,
+            flags: InteractionResponseFlags.Ephemeral
+        });
+    }
+
+    const receiverCurrency = getUserCurrency(targetUser.id);
+    senderCurrency.pocket -= amount;
+    receiverCurrency.pocket += amount;
+    saveCurrencyData();
+
+    const embed = new EmbedBuilder()
+        .setTitle('💸 Currency Transfer')
+        .setDescription(`${interaction.user.tag} gave ${amount.toLocaleString()} currency to ${targetUser.tag}!`)
+        .addFields(
+            { name: 'Your New Balance', value: senderCurrency.pocket.toLocaleString(), inline: true },
+            { name: `${targetUser.tag}'s New Balance`, value: receiverCurrency.pocket.toLocaleString(), inline: true }
+        )
+        .setColor('#00FF00');
+
+    await interaction.reply({ embeds: [embed] });
+
+    // Notify the receiver
+    try {
+        await targetUser.send({
+            content: `💸 ${interaction.user.tag} gave you ${amount.toLocaleString()} currency! Your new balance: ${receiverCurrency.pocket.toLocaleString()}`
+        });
+    } catch (error) {
+        console.log(`Could not DM ${targetUser.tag} about the currency transfer:`, error);
+    }
+    break;
+}
+            case "daily": {
+    const userCurrency = getUserCurrency(interaction.user.id);
+    const now = Date.now();
+    const oneDay = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+    if (userCurrency.lastDaily && (now - userCurrency.lastDaily) < oneDay) {
+        const timeLeft = oneDay - (now - userCurrency.lastDaily);
+        const hours = Math.floor(timeLeft / (60 * 60 * 1000));
+        const minutes = Math.floor((timeLeft % (60 * 60 * 1000)) / (60 * 1000));
+        return interaction.reply({
+            content: `❌ You can claim your daily reward again in ${hours}h ${minutes}m!`,
+            flags: InteractionResponseFlags.Ephemeral
+        });
+    }
+
+    const reward = 1000;
+    userCurrency.pocket += reward;
+    userCurrency.winnings += reward;
+    userCurrency.lastDaily = now;
+    saveCurrencyData();
+
+    const embed = new EmbedBuilder()
+        .setTitle('🎁 Daily Reward')
+        .setDescription(`You claimed your daily reward of ${reward.toLocaleString()} currency!`)
+        .addFields(
+            { name: 'Pocket', value: userCurrency.pocket.toLocaleString(), inline: true },
+            { name: 'Winnings', value: userCurrency.winnings.toLocaleString(), inline: true }
+        )
+        .setColor('#FFD700');
+
+    await interaction.reply({ embeds: [embed] });
     break;
 }
 
@@ -1398,13 +1776,121 @@ client.on("interactionCreate", async (interaction) => {
                 }
 
             case "convert": {
-                const value = interaction.options.getNumber("value");
-                const from = interaction.options.getString("from");
-                const to = interaction.options.getString("to");
-                // Perform conversion (not implemented here)
-                await interaction.reply(`🔄 ${value} ${from} = X ${to}`);
-                break;
+    const value = interaction.options.getNumber("value");
+    const from = interaction.options.getString("from").toLowerCase();
+    const to = interaction.options.getString("to").toLowerCase();
+
+    let result;
+    let unitType;
+
+    // Length conversions
+    const lengthUnits = {
+        cm: { toInches: 0.393701 },
+        inches: { toCm: 2.54 },
+        meters: { toFeet: 3.28084 },
+        feet: { toMeters: 0.3048 },
+        km: { toMiles: 0.621371 },
+        miles: { toKm: 1.60934 },
+    };
+
+    // Temperature conversions
+    const tempUnits = {
+        celsius: {
+            toFahrenheit: (val) => (val * 9) / 5 + 32,
+            toKelvin: (val) => val + 273.15,
+        },
+        fahrenheit: {
+            toCelsius: (val) => ((val - 32) * 5) / 9,
+            toKelvin: (val) => ((val - 32) * 5) / 9 + 273.15,
+        },
+        kelvin: {
+            toCelsius: (val) => val - 273.15,
+            toFahrenheit: (val) => ((val - 273.15) * 9) / 5 + 32,
+        },
+    };
+
+    // Currency conversions (we'll fetch rates dynamically)
+    const currencyUnits = ["usd", "eur", "gbp", "jpy", "inr"];
+
+    // Check for length conversion
+    if (from in lengthUnits && to in lengthUnits) {
+        unitType = "Length";
+        if (from === "cm" && to === "inches") result = value * lengthUnits.cm.toInches;
+        else if (from === "inches" && to === "cm") result = value * lengthUnits.inches.toCm;
+        else if (from === "meters" && to === "feet") result = value * lengthUnits.meters.toFeet;
+        else if (from === "feet" && to === "meters") result = value * lengthUnits.feet.toMeters;
+        else if (from === "km" && to === "miles") result = value * lengthUnits.km.toMiles;
+        else if (from === "miles" && to === "km") result = value * lengthUnits.miles.toKm;
+        else {
+            return interaction.reply({
+                content: "❌ Unsupported length conversion!",
+                flags: InteractionResponseFlags.Ephemeral
+            });
+        }
+    }
+    // Check for temperature conversion
+    else if (from in tempUnits && to in tempUnits) {
+        unitType = "Temperature";
+        if (from === "celsius" && to === "fahrenheit") result = tempUnits.celsius.toFahrenheit(value);
+        else if (from === "celsius" && to === "kelvin") result = tempUnits.celsius.toKelvin(value);
+        else if (from === "fahrenheit" && to === "celsius") result = tempUnits.fahrenheit.toCelsius(value);
+        else if (from === "fahrenheit" && to === "kelvin") result = tempUnits.fahrenheit.toKelvin(value);
+        else if (from === "kelvin" && to === "celsius") result = tempUnits.kelvin.toCelsius(value);
+        else if (from === "kelvin" && to === "fahrenheit") result = tempUnits.kelvin.toFahrenheit(value);
+        else {
+            return interaction.reply({
+                content: "❌ Unsupported temperature conversion!",
+                flags: InteractionResponseFlags.Ephemeral
+            });
+        }
+    }
+    // Check for currency conversion
+    else if (currencyUnits.includes(from) && currencyUnits.includes(to)) {
+        unitType = "Currency";
+        try {
+            const response = await fetch(
+                `https://v6.exchangerate-api.com/v6/${process.env.EXCHANGERATE_API_KEY}/latest/${from.toUpperCase()}`
+            );
+            const data = await response.json();
+            if (data.result !== "success") {
+                return interaction.reply({
+                    content: `❌ Currency API Error: ${data.error-type}`,
+                    flags: InteractionResponseFlags.Ephemeral
+                });
             }
+            const rate = data.conversion_rates[to.toUpperCase()];
+            if (!rate) {
+                return interaction.reply({
+                    content: `❌ Invalid currency pair!`,
+                    flags: InteractionResponseFlags.Ephemeral
+                });
+            }
+            result = value * rate;
+        } catch (error) {
+            console.error("Currency Conversion Error:", error);
+            return interaction.reply({
+                content: "❌ Failed to fetch currency conversion rates!",
+                flags: InteractionResponseFlags.Ephemeral
+            });
+        }
+    } else {
+        return interaction.reply({
+            content: "❌ Unsupported conversion! Supported units: cm/inches, meters/feet, km/miles, celsius/fahrenheit/kelvin, usd/eur/gbp/jpy/inr",
+            flags: InteractionResponseFlags.Ephemeral
+        });
+    }
+
+    const embed = new EmbedBuilder()
+        .setTitle(`🔄 ${unitType} Conversion`)
+        .addFields(
+            { name: 'From', value: `${value} ${from.toUpperCase()}`, inline: true },
+            { name: 'To', value: `${result.toFixed(2)} ${to.toUpperCase()}`, inline: true }
+        )
+        .setColor('#00AAFF');
+
+    await interaction.reply({ embeds: [embed] });
+    break;
+}
 
             case "translate": {
     const text = interaction.options.getString("text");
@@ -1447,6 +1933,53 @@ client.on("interactionCreate", async (interaction) => {
         console.error("Translation Error Details:", error.message, error.stack);
         await interaction.reply("❌ Couldn’t translate the text—try again later! (Check logs for details)");
     }
+    break;
+}
+
+
+            case "balance": {
+    const targetUser = interaction.options.getUser("user") || interaction.user;
+    const userCurrency = getUserCurrency(targetUser.id);
+
+    const embed = new EmbedBuilder()
+        .setTitle(`💰 Balance for ${targetUser.tag}`)
+        .addFields(
+            { name: 'Pocket', value: userCurrency.pocket.toLocaleString(), inline: true },
+            { name: 'Winnings', value: userCurrency.winnings.toLocaleString(), inline: true },
+            { name: 'Net', value: (userCurrency.pocket + userCurrency.winnings - 10000).toLocaleString(), inline: true }
+        )
+        .setColor('#FFD700');
+
+    await interaction.reply({ embeds: [embed] });
+    break;
+}
+            case "leaderboard": {
+    const limit = interaction.options.getInteger("limit") || 10;
+
+    // Sort users by winnings
+    const sortedUsers = Object.entries(currencyData)
+        .sort(([, a], [, b]) => (b.winnings + b.pocket) - (a.winnings + a.pocket))
+        .slice(0, limit);
+
+    if (sortedUsers.length === 0) {
+        return interaction.reply({
+            content: "❌ No users have played yet!",
+            flags: InteractionResponseFlags.Ephemeral
+        });
+    }
+
+    const embed = new EmbedBuilder()
+        .setTitle('🏆 Currency Leaderboard')
+        .setDescription(
+            sortedUsers.map(([userId, data], index) => {
+                const user = client.users.cache.get(userId);
+                const username = user ? user.tag : 'Unknown User';
+                return `${index + 1}. **${username}** - Total: ${(data.pocket + data.winnings).toLocaleString()} (Winnings: ${data.winnings.toLocaleString()})`;
+            }).join('\n')
+        )
+        .setColor('#FFD700');
+
+    await interaction.reply({ embeds: [embed] });
     break;
 }
 
