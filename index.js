@@ -1365,12 +1365,15 @@ client.on("interactionCreate", async (interaction) => {
 }
 
             case "ascii": {
-                const text = interaction.options.getString("text");
-                // Convert to ASCII art (not implemented here)
-                await interaction.reply(`🎨 ASCII Art:
-[Converted text]`);
-                break;
-            }
+    const text = interaction.options.getString("text");
+    if (!text) return interaction.reply("❌ Please provide text to convert!");
+
+    figlet(text, (err, data) => {
+        if (err) return interaction.reply("❌ Failed to generate ASCII art!");
+        interaction.reply(`🎨 ASCII Art:\n\`\`\`${data}\`\`\``);
+    });
+    break;
+}
 
             case "meme": {
     try {
