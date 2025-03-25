@@ -630,11 +630,15 @@ const rest = new REST({ version: "10" }).setToken(token);
 
 (async () => {
   try {
-    console.log('Started refreshing application (/) commands.');
-    const result = await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
-    console.log('Successfully reloaded application (/) commands.', result);
+    const guildId = '743674582522921020'; // Replace with your Discord server ID
+    console.log(`Started refreshing application (/) commands for guild ${guildId}.`);
+    const result = await rest.put(
+      Routes.applicationGuildCommands(process.env.CLIENT_ID, guildId),
+      { body: commands }
+    );
+    console.log(`Successfully reloaded guild (/) commands for guild ${guildId}.`, result);
   } catch (error) {
-    console.error('Failed to register slash commands:', error.message);
+    console.error('Failed to register guild slash commands:', error.message);
     console.error('Error details:', error);
   }
 })();
