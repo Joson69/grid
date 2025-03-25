@@ -10,6 +10,7 @@ app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
 
+
 // Your bot code starts here
 
 const {
@@ -31,6 +32,74 @@ const { translate } = require('@vitalets/google-translate-api');
 const figlet = require("figlet");
 
 const fs = require('fs');
+
+// Initialize Spotify API
+const spotifyApi = new SpotifyWebApi({
+    clientId: process.env.SPOTIFY_CLIENT_ID,
+    clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+});
+
+// Add after Spotify initialization
+spotifyApi.setRedirectURI(`http://localhost:${port}/callback`); // Update for your platform
+
+app.get('/login', (req, res) => {
+    const scopes = ['user-read-currently-playing'];
+    res.redirect(spotifyApi.createAuthorizeURL(scopes));
+});
+
+app.get('/callback', async (req, res) => {
+    const { code } = req.query;
+    try {
+        const data = await spotifyApi.authorizationCodeGrant(code);
+        spotifyApi.setAccessToken(data.body['access_token']);
+        spotifyApi.setRefreshToken(data.body['refresh_token']);
+        res.send('Authentication successful! You can close this tab.');
+    } catch (error) {
+        res.send('Authentication failed: ' + error.message);
+    }
+});
+
+// Update refresh function to use refresh token
+async function refreshSpotifyToken() {
+    try {
+        if (spotifyApi.getRefreshToken()) {
+            const data = await spotifyApi.refreshAccessToken();
+            spotifyApi.setAccessToken(data.body['access_token']);
+            console.log('Spotify token refreshed');
+        } else {
+            console.log('No refresh token available yet. Use /login first.');
+        }
+    } catch (error) {
+        console.error('Error refreshing Spotify token:', error);
+    }
+}
+
+async function getCurrentSong() {
+    await refreshSpotifyToken();
+    try {
+        const data = await spotifyApi.getMyCurrentPlayingTrack();
+        if (data.body && data.body.item) {
+            return {
+                name: data.body.item.name,
+                artist: data.body.item.artists[0].name
+            };
+        }
+        return null;
+    } catch (error) {
+        console.error('Error fetching current song:', error);
+        return null;
+    }
+}
+
+async function getLyrics(songName, artist) {
+    try {
+        const lyrics = await lyricsFinder(artist, songName);
+        return lyrics || 'Lyrics not found.';
+    } catch (error) {
+        console.error('Error fetching lyrics:', error);
+        return 'Couldn’t fetch lyrics.';
+    }
+}
 
 // Load currency data
 let currencyData = {};
@@ -1786,6 +1855,22 @@ client.on("interactionCreate", async (interaction) => {
             }).join('\n')
         )
         .setColor('#FFD700');
+
+    await interaction.reply({ embeds: [embed] });
+    break;
+}
+            case "lyrics": {
+    const song = await getCurrentSong();
+    if (!song) {
+        return interaction.reply({ content: 'You’re not listening to anything on Spotify, or I can’t access it!', ephemeral: true });
+    }
+
+    const lyrics = await getLyrics(song.name, song.artist);
+    const embed = new EmbedBuilder()
+        .setTitle(`Lyrics for "${song.name}" by ${song.artist}`)
+        .setDescription(lyrics.slice(0, 4096)) // Discord embed description limit
+        .setColor('#1DB954') // Spotify green
+        .setFooter({ text: `Requested by ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() });
 
     await interaction.reply({ embeds: [embed] });
     break;
