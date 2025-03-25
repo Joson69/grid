@@ -78,7 +78,7 @@ const commands = [
     {
     name: "lyrics",
     description: "Get lyrics for the song you’re currently listening to on Spotify"
-},
+    },
     {
         name: "dadjoke",
         description: "Sends a random dad joke",
