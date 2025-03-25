@@ -32,6 +32,8 @@ const { translate } = require('@vitalets/google-translate-api');
 const figlet = require("figlet");
 
 const fs = require('fs');
+const SpotifyWebApi = require('spotify-web-api-node');
+const lyricsFinder = require('lyrics-finder');
 
 // Initialize Spotify API
 const spotifyApi = new SpotifyWebApi({
