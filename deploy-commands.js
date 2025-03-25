@@ -629,16 +629,27 @@ const commands = [
 const rest = new REST({ version: "10" }).setToken(token);
 
 (async () => {
-  try {
-    const guildId = '743674582522921020'; // Replace with your Discord server ID
-    console.log(`Started refreshing application (/) commands for guild ${guildId}.`);
-    const result = await rest.put(
-      Routes.applicationGuildCommands(process.env.CLIENT_ID, guildId),
-      { body: commands }
-    );
-    console.log(`Successfully reloaded guild (/) commands for guild ${guildId}.`, result);
-  } catch (error) {
-    console.error('Failed to register guild slash commands:', error.message);
-    console.error('Error details:', error);
-  }
+    try {
+        console.log("Fetching existing commands...");
+        const existingCommands = await rest.get(
+            Routes.applicationGuildCommands(clientId, guildId)
+        );
+
+        console.log(`Deleting ${existingCommands.length} old commands...`);
+        for (const command of existingCommands) {
+            await rest.delete(
+                `${Routes.applicationGuildCommands(clientId, guildId)}/${command.id}`
+            );
+            console.log(`Deleted command: ${command.name}`);
+        }
+
+        console.log(`Registering ${commands.length} new commands...`);
+        await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
+            body: commands,
+        });
+
+        console.log("Successfully updated slash commands! ✅");
+    } catch (error) {
+        console.error("Error updating commands:", error);
+    }
 })();
