@@ -123,8 +123,6 @@ function getUserCurrency(userId) {
     return currencyData[userId];
 };
 
-const commands = require('./commands');
-
 const { REST, Routes } = require('discord.js');
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
