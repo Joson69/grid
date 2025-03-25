@@ -629,13 +629,12 @@ const commands = [
 const rest = new REST({ version: "10" }).setToken(token);
 
 (async () => {
-    try {
-        console.log("Started refreshing application (/) commands.");
-        await rest.put(Routes.applicationCommands(clientId), {
-            body: commands,
-        });
-        console.log("Successfully reloaded application (/) commands.");
-    } catch (error) {
-        console.error("Error registering slash commands:", error);
-    }
+  try {
+    console.log('Started refreshing application (/) commands.');
+    const result = await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
+    console.log('Successfully reloaded application (/) commands.', result);
+  } catch (error) {
+    console.error('Failed to register slash commands:', error.message);
+    console.error('Error details:', error);
+  }
 })();
