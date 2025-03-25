@@ -17,6 +17,8 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "figlet": "^1.8.0",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "spotify-web-api-node": "^5.0.2",
+    "lyrics-finder": "^21.7.0"
   }
 }
