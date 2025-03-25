@@ -123,12 +123,19 @@ function getUserCurrency(userId) {
     return currencyData[userId];
 };
 
+const commands = require('./commands');
+
 const { REST, Routes } = require('discord.js');
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+const commands = require('./commands');
 
 async function registerCommands() {
   try {
+    if (!commands || !Array.isArray(commands)) {
+      throw new Error('Commands array is not defined or not an array');
+    }
+    console.log('Commands to register:', commands);
     console.log('Started refreshing application (/) commands.');
     const result = await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
     console.log('Successfully reloaded application (/) commands.', result);
@@ -141,7 +148,7 @@ async function registerCommands() {
 // Register commands on startup
 registerCommands();
 
-// Register commands every 5 minutes to ensure they’re up to date
+// Register commands every 5 minutes
 setInterval(registerCommands, 5 * 60 * 1000);
 
 const languageMap = {
