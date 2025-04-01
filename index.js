@@ -599,11 +599,22 @@ client.on("interactionCreate", async (interaction) => {
             }
 
             case "uptime": {
-                const uptime = process.uptime();
-                const uptimeString = new Date(uptime * 1000).toISOString().substr(11, 8);
-                await interaction.reply(`⏳ Bot Uptime: **${uptimeString}**`);
-                break;
-            }
+    const uptime = process.uptime(); // Uptime in seconds
+    const days = Math.floor(uptime / (24 * 60 * 60));
+    const hours = Math.floor((uptime % (24 * 60 * 60)) / (60 * 60));
+    const minutes = Math.floor((uptime % (60 * 60)) / 60);
+    const seconds = Math.floor(uptime % 60);
+
+    // Build the uptime string conditionally
+    let uptimeString = '';
+    if (days > 0) uptimeString += `${days}d `;
+    uptimeString += `${hours.toString().padStart(2, '0')}:${minutes
+        .toString()
+        .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+    await interaction.reply(`⏳ Bot Uptime: **${uptimeString}**`);
+    break;
+}
 
             case "ping": {
                 await interaction.reply(`🏓 Pong! Latency: **${client.ws.ping}ms**`);
