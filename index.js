@@ -1931,6 +1931,68 @@ client.on("interactionCreate", async (interaction) => {
     break;
 }
 
+            case "calculate": {
+    const num1 = interaction.options.getNumber("number1");
+    const operator = interaction.options.getString("operator");
+    const num2 = interaction.options.getNumber("number2");
+
+    let result;
+    let operation;
+
+    // Perform the calculation based on the operator
+    switch (operator) {
+        case "add":
+            result = num1 + num2;
+            operation = "+";
+            break;
+        case "subtract":
+            result = num1 - num2;
+            operation = "-";
+            break;
+        case "multiply":
+            result = num1 * num2;
+            operation = "×";
+            break;
+        case "divide":
+            if (num2 === 0) {
+                await interaction.reply({
+                    content: "❌ Cannot divide by zero!",
+                    ephemeral: true,
+                });
+                return;
+            }
+            result = num1 / num2;
+            operation = "÷";
+            break;
+        default:
+            await interaction.reply({
+                content: "❌ Invalid operator!",
+                ephemeral: true,
+            });
+            return;
+    }
+
+    // Format the result (limit to 2 decimal places if it's not an integer)
+    const formattedResult = Number.isInteger(result) ? result : result.toFixed(2);
+
+    // Create an embed for the response
+    const calcEmbed = new EmbedBuilder()
+        .setTitle("🧮 Calculation Result")
+        .addFields(
+            { name: "Expression", value: `${num1} ${operation} ${num2}`, inline: true },
+            { name: "Result", value: `${formattedResult}`, inline: true }
+        )
+        .setColor(0x3498db)
+        .setFooter({
+            text: `Requested by ${interaction.user.tag}`,
+            iconURL: interaction.user.displayAvatarURL(),
+        });
+
+    await interaction.reply({ embeds: [calcEmbed] });
+    break;
+}
+            
+
             case "meme": {
     try {
         const response = await fetch('https://meme-api.com/gimme');
