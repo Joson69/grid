@@ -668,20 +668,30 @@ client.on("interactionCreate", async (interaction) => {
             }
 
             case "servericon": {
-                const icon = interaction.guild.iconURL({ dynamic: true, size: 1024 });
-                if (!icon) {
-                    return interaction.reply({
-                        content: "❌ This server has no icon.",
-                        flags: [InteractionResponseFlags.Ephemeral],
-                    });
-                }
-                const iconEmbed = new EmbedBuilder()
-                    .setTitle(`🖼️ ${interaction.guild.name} - Server Icon`)
-                    .setImage(icon)
-                    .setColor(0x3498db);
-                await interaction.reply({ embeds: [iconEmbed] });
-                break;
-            }
+    await interaction.deferReply(); // Defer reply since fetching might take time
+
+    const { guild } = interaction;
+
+    // Check if the server has an icon
+    if (!guild.iconURL()) {
+        return interaction.editReply({
+            content: "❌ This server doesn’t have an icon set!",
+        });
+    }
+
+    // Create an embed to display the server icon
+    const serverIconEmbed = new EmbedBuilder()
+        .setTitle(`${guild.name} – Server Icon`)
+        .setImage(guild.iconURL({ dynamic: true, size: 1024 })) // 'dynamic: true' ensures GIF support
+        .setColor(0x3498db)
+        .setFooter({
+            text: `Requested by ${interaction.user.tag}`,
+            iconURL: interaction.user.displayAvatarURL(),
+        });
+
+    await interaction.editReply({ embeds: [serverIconEmbed] });
+    break;
+}
 
             case "nickname": {
                 if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageNicknames)) {
