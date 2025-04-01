@@ -606,6 +606,37 @@ const commands = [
         description: "Displays bot statistics and performance metrics",
     },
     {
+        name: "calculate",
+        description: "Performs a basic arithmetic calculation",
+        options: [
+            {
+                name: "number1",
+                type: 10, // Number type
+                description: "The first number",
+                required: true,
+            },
+            {
+                name: "operator",
+                type: 3, // String type
+                description: "The operation to perform",
+                required: true,
+                choices: [
+                    { name: "Add", value: "add" },
+                    { name: "Subtract", value: "subtract" },
+                    { name: "Multiply", value: "multiply" },
+                    { name: "Divide", value: "divide" },
+                ],
+            },
+            {
+                name: "number2",
+                type: 10, // Number type
+                description: "The second number",
+                required: true,
+            },
+        ],
+     },
+    },
+    {
         name: "quote",
         description: "Quotes a message by ID",
         options: [
