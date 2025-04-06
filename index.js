@@ -10,136 +10,127 @@ app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
 
-
-// Your bot code starts here
-
+// Bot code starts here
 const {
-    Client,
-    GatewayIntentBits,
-    EmbedBuilder,
-    PermissionsBitField,
-    InteractionResponseFlags,
-    ChannelType,
-    ActionRowBuilder,
-    ButtonBuilder,
-    ButtonStyle,
-} = require("discord.js");
-const fetch = (...args) => import("node-fetch").then(({ default: fetch }) => fetch(...args));
-require("dotenv").config();
+  Client,
+  GatewayIntentBits,
+  EmbedBuilder,
+  PermissionsBitField,
+  InteractionResponseFlags,
+  ChannelType,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+} = require('discord.js');
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+require('dotenv').config();
 
 const { translate } = require('@vitalets/google-translate-api');
-
-const figlet = require("figlet");
-
+const figlet = require('figlet');
 const fs = require('fs');
 const SpotifyWebApi = require('spotify-web-api-node');
 const lyricsFinder = require('lyrics-finder');
+const { REST, Routes } = require('discord.js');
+const commands = require('./commands.js'); // Import commands from commands.js
 
 // Initialize Spotify API
 const spotifyApi = new SpotifyWebApi({
-    clientId: process.env.SPOTIFY_CLIENT_ID,
-    clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+  clientId: process.env.SPOTIFY_CLIENT_ID,
+  clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
 });
-
-// Add after Spotify initialization
-spotifyApi.setRedirectURI(`http://localhost:${port}/callback`); // Update for your platform
+spotifyApi.setRedirectURI(`http://localhost:${port}/callback`);
 
 app.get('/login', (req, res) => {
-    const scopes = ['user-read-currently-playing'];
-    res.redirect(spotifyApi.createAuthorizeURL(scopes));
+  const scopes = ['user-read-currently-playing'];
+  res.redirect(spotifyApi.createAuthorizeURL(scopes));
 });
 
 app.get('/callback', async (req, res) => {
-    const { code } = req.query;
-    try {
-        const data = await spotifyApi.authorizationCodeGrant(code);
-        spotifyApi.setAccessToken(data.body['access_token']);
-        spotifyApi.setRefreshToken(data.body['refresh_token']);
-        res.send('Authentication successful! You can close this tab.');
-    } catch (error) {
-        res.send('Authentication failed: ' + error.message);
-    }
+  const { code } = req.query;
+  try {
+    const data = await spotifyApi.authorizationCodeGrant(code);
+    spotifyApi.setAccessToken(data.body['access_token']);
+    spotifyApi.setRefreshToken(data.body['refresh_token']);
+    res.send('Authentication successful! You can close this tab.');
+  } catch (error) {
+    res.send('Authentication failed: ' + error.message);
+  }
 });
 
-// Update refresh function to use refresh token
 async function refreshSpotifyToken() {
-    try {
-        if (spotifyApi.getRefreshToken()) {
-            const data = await spotifyApi.refreshAccessToken();
-            spotifyApi.setAccessToken(data.body['access_token']);
-            console.log('Spotify token refreshed');
-        } else {
-            console.log('No refresh token available yet. Use /login first.');
-        }
-    } catch (error) {
-        console.error('Error refreshing Spotify token:', error);
+  try {
+    if (spotifyApi.getRefreshToken()) {
+      const data = await spotifyApi.refreshAccessToken();
+      spotifyApi.setAccessToken(data.body['access_token']);
+      console.log('Spotify token refreshed');
+    } else {
+      console.log('No refresh token available yet. Use /login first.');
     }
+  } catch (error) {
+    console.error('Error refreshing Spotify token:', error);
+  }
 }
 
 async function getCurrentSong() {
-    await refreshSpotifyToken();
-    try {
-        const data = await spotifyApi.getMyCurrentPlayingTrack();
-        if (data.body && data.body.item) {
-            return {
-                name: data.body.item.name,
-                artist: data.body.item.artists[0].name
-            };
-        }
-        return null;
-    } catch (error) {
-        console.error('Error fetching current song:', error);
-        return null;
+  await refreshSpotifyToken();
+  try {
+    const data = await spotifyApi.getMyCurrentPlayingTrack();
+    if (data.body && data.body.item) {
+      return {
+        name: data.body.item.name,
+        artist: data.body.item.artists[0].name,
+      };
     }
+    return null;
+  } catch (error) {
+    console.error('Error fetching current song:', error);
+    return null;
+  }
 }
 
 async function getLyrics(songName, artist) {
-    try {
-        const lyrics = await lyricsFinder(artist, songName);
-        return lyrics || 'Lyrics not found.';
-    } catch (error) {
-        console.error('Error fetching lyrics:', error);
-        return 'Couldn’t fetch lyrics.';
-    }
+  try {
+    const lyrics = await lyricsFinder(artist, songName);
+    return lyrics || 'Lyrics not found.';
+  } catch (error) {
+    console.error('Error fetching lyrics:', error);
+    return 'Couldn’t fetch lyrics.';
+  }
 }
 
 // Load currency data
 let currencyData = {};
 if (fs.existsSync('currency.json')) {
-    currencyData = JSON.parse(fs.readFileSync('currency.json', 'utf8'));
+  currencyData = JSON.parse(fs.readFileSync('currency.json', 'utf8'));
 }
 
-// Function to save currency data
 function saveCurrencyData() {
-    fs.writeFileSync('currency.json', JSON.stringify(currencyData, null, 2));
+  fs.writeFileSync('currency.json', JSON.stringify(currencyData, null, 2));
 }
 
-// Function to get user's currency
 function getUserCurrency(userId) {
-    if (!currencyData[userId]) {
-        currencyData[userId] = { pocket: 10000, winnings: 0, lastDaily: 0 }; // Added lastDaily for /daily
-        saveCurrencyData();
-    }
-    return currencyData[userId];
-};
+  if (!currencyData[userId]) {
+    currencyData[userId] = { pocket: 10000, winnings: 0, lastDaily: 0 };
+    saveCurrencyData();
+  }
+  return currencyData[userId];
+}
 
-const { REST, Routes } = require('discord.js');
- 
- const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
- 
- async function registerCommands() {
-   try {
-     console.log('Started refreshing application (/) commands.');
-     const result = await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
-     console.log('Successfully reloaded application (/) commands.', result);
-   } catch (error) {
-     console.error('Failed to register slash commands:', error.message);
-     console.error('Error details:', error);
-   }
- }
- 
- // Register commands on startup
- registerCommands();
+const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+
+async function registerCommands() {
+  try {
+    console.log('Started refreshing application (/) commands.');
+    const result = await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
+    console.log('Successfully reloaded application (/) commands.', result);
+  } catch (error) {
+    console.error('Failed to register slash commands:', error.message);
+    console.error('Error details:', error);
+  }
+}
+
+// Register commands on startup only (no interval)
+registerCommands();
  
  // Register commands every 5 minutes to ensure they’re up to date
  setInterval(registerCommands, 5 * 60 * 1000);
