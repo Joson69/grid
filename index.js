@@ -438,54 +438,74 @@ client.on("interactionCreate", async (interaction) => {
             }
 
             case "serverinfo": {
-                await interaction.deferReply();
-                const { guild } = interaction;
-                const owner = await guild.fetchOwner();
-                const createdAt = `<t:${Math.floor(guild.createdTimestamp / 1000)}:D>`;
-                const totalMembers = guild.memberCount;
-                const humanCount = guild.members.cache.filter((member) => !member.user.bot).size;
-                const botCount = guild.members.cache.filter((member) => member.user.bot).size;
-                const rolesCount = guild.roles.cache.size;
-                const categories = guild.channels.cache.filter((c) => c.type === 4).size;
-                const textChannels = guild.channels.cache.filter((c) => c.type === 0).size;
-                const voiceChannels = guild.channels.cache.filter((c) => c.type === 2).size;
-                const boostLevel = guild.premiumTier;
-                const serverId = guild.id;
-                const verificationLevel = guild.verificationLevel;
+    await interaction.deferReply();
+    const { guild } = interaction;
+    
+    // Fetch members to ensure cache is populated
+    try {
+        await guild.members.fetch({ force: true });
+    } catch (error) {
+        console.error("ServerInfo Member Fetch Error:", error);
+        await interaction.editReply({
+            content: "❌ Failed to fetch members. Ensure I have proper permissions.",
+        });
+        break;
+    }
 
-                const serverEmbed = new EmbedBuilder()
-                    .setTitle(`📜 ${guild.name} - Server Info`)
-                    .setThumbnail(guild.iconURL({ dynamic: true, size: 1024 }))
-                    .setColor(0x3498db)
-                    .addFields(
-                        { name: "**Owner**", value: `${owner.user.tag}`, inline: true },
-                        { name: "**Created On**", value: createdAt, inline: true },
-                        { name: "**Server ID**", value: serverId, inline: false },
-                        {
-                            name: "👥 **Members**",
-                            value: `Humans: ${humanCount}\nBots: ${botCount}\nTotal: ${totalMembers}`,
-                            inline: true,
-                        },
-                        { name: "📜 **Roles**", value: `${rolesCount}`, inline: true },
-                        {
-                            name: "🗂️ **Channels**",
-                            value: `Categories: ${categories}\nText: ${textChannels}\nVoice: ${voiceChannels}`,
-                            inline: true,
-                        },
-                        {
-                            name: "💎 **Boost Level**",
-                            value: `${boostLevel > 0 ? `Level ${boostLevel}` : "None"}`,
-                            inline: true,
-                        },
-                        { name: "🔒 **Verification**", value: `${verificationLevel}`, inline: true }
-                    )
-                    .setFooter({
-                        text: `Requested by ${interaction.user.tag}`,
-                        iconURL: interaction.user.displayAvatarURL(),
-                    });
-                await interaction.editReply({ embeds: [serverEmbed] });
-                break;
-            }
+    const owner = await guild.fetchOwner();
+    const createdAt = `<t:${Math.floor(guild.createdTimestamp / 1000)}:D>`;
+    const totalMembers = guild.memberCount;
+    const humanCount = guild.members.cache.filter((member) => !member.user.bot).size;
+    const botCount = guild.members.cache.filter((member) => member.user.bot).size;
+    const rolesCount = guild.roles.cache.size;
+    const categories = guild.channels.cache.filter((c) => c.type === 4).size;
+    const textChannels = guild.channels.cache.filter((c) => c.type === 0).size;
+    const voiceChannels = guild.channels.cache.filter((c) => c.type === 2).size;
+    const boostLevel = guild.premiumTier;
+    const serverId = guild.id;
+    const verificationLevel = guild.verificationLevel;
+
+    // Optional: Add mismatch check like in membercount
+    if (humanCount + botCount !== totalMembers) {
+        console.warn(
+            `ServerInfo Mismatch: Humans + Bots (${humanCount + botCount}) does not equal Total (${totalMembers})`
+        );
+    }
+
+    const serverEmbed = new EmbedBuilder()
+        .setTitle(`📜 ${guild.name} - Server Info`)
+        .setThumbnail(guild.iconURL({ dynamic: true, size: 1024 }))
+        .setColor(0x3498db)
+        .addFields(
+            { name: "**Owner**", value: `${owner.user.tag}`, inline: true },
+            { name: "**Created On**", value: createdAt, inline: true },
+            { name: "**Server ID**", value: serverId, inline: false },
+            {
+                name: "👥 **Members**",
+                value: `Humans: ${humanCount}\nBots: ${botCount}\nTotal: ${totalMembers}`,
+                inline: true,
+            },
+            { name: "📜 **Roles**", value: `${rolesCount}`, inline: true },
+            {
+                name: "🗂️ **Channels**",
+                value: `Categories: ${categories}\nText: ${textChannels}\nVoice: ${voiceChannels}`,
+                inline: true,
+            },
+            {
+                name: "💎 **Boost Level**",
+                value: `${boostLevel > 0 ? `Level ${boostLevel}` : "None"}`,
+                inline: true,
+            },
+            { name: "🔒 **Verification**", value: `${verificationLevel}`, inline: true }
+        )
+        .setFooter({
+            text: `Requested by ${interaction.user.tag}`,
+            iconURL: interaction.user.displayAvatarURL(),
+        });
+
+    await interaction.editReply({ embeds: [serverEmbed] });
+    break;
+}
 
             case "userinfo": {
                 const user = interaction.options.getUser("user") || interaction.user;
