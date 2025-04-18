@@ -67,7 +67,6 @@ async function refreshSpotifyToken() {
     }
   } catch (error) {
     console.error('Error refreshing Spotify token:', error);
-  }
 }
 
 async function getCurrentSong() {
@@ -113,7 +112,9 @@ function getUserCurrency(userId) {
     saveCurrencyData();
   }
   return currencyData[userId];
-}
+};
+  
+const { REST, Routes } = require('discord.js');
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
