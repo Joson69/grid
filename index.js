@@ -2005,7 +2005,7 @@ client.on("interactionCreate", async (interaction) => {
             
 
             case "meme": {
-    try {
+              try {
         const response = await fetch('https://meme-api.com/gimme');
         const data = await response.json();
         if (!data.url || !data.url.match(/\.(jpg|png|gif)$/)) {
@@ -2022,9 +2022,10 @@ client.on("interactionCreate", async (interaction) => {
         await interaction.reply("❌ Couldn’t fetch a meme right now!");
     }
     break;
-}
-        }
-    } catch (error) {
+              
+    }
+   }
+  } catch (error) {
         console.error("❌ Command Execution Error:", error);
         if (!interaction.replied) {
             await interaction.reply({
