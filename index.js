@@ -120,23 +120,6 @@ const { REST, Routes } = require('discord.js');
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
-async function registerCommands() {
-  try {
-    console.log('Started refreshing application (/) commands.');
-    const result = await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
-    console.log('Successfully reloaded application (/) commands.', result);
-  } catch (error) {
-    console.error('Failed to register slash commands:', error.message);
-    console.error('Error details:', error);
-  }
-}
-
-// Register commands on startup only (no interval)
-registerCommands();
- 
- // Register commands every 5 minutes to ensure they’re up to date
- setInterval(registerCommands, 5 * 60 * 1000);
-
 const languageMap = {
     english: "en",
     hindi: "hi",
