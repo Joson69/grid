@@ -2010,7 +2010,7 @@ client.on("interactionCreate", async (interaction) => {
         // Fallback to "week" if no suitable memes found
         if (!data.data || !data.data.children.length) {
             response = await fetch(`https://www.reddit.com/r/${subreddit}/hot.json?limit=50&t=week`, {
-                headers: { "User-Agent": "User-Agent": "DiscordBot/1.0" }
+                headers: { "User-Agent":  "DiscordBot/1.0" }
             });
             data = await response.json();
         }
