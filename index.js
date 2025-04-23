@@ -1991,11 +1991,29 @@ client.on("interactionCreate", async (interaction) => {
 
             case "meme": {
     await interaction.deferReply();
+
+    // In-memory cache for shown meme URLs
+    const shownMemes = client.shownMemes || new Set();
+    client.shownMemes = shownMemes; // Store on client to persist across commands
+
+    // List of subreddits to cycle through
+    const subreddits = ["dankmemes", "memes", "wholesomememes"];
+    const subreddit = subreddits[Math.floor(Math.random() * subreddits.length)];
+
     try {
-        const response = await fetch("https://www.reddit.com/r/dankmemes/hot.json?limit=25&t=day", {
-            headers: { "User-Agent": "DiscordBot/1.0" } // Reddit requires a User-Agent
+        // Try fetching from "hot" posts in the last day
+        let response = await fetch(`https://www.reddit.com/r/${subreddit}/hot.json?limit=50&t=day`, {
+            headers: { "User-Agent": "DiscordBot/1.0" }
         });
-        const data = await response.json();
+        let data = await response.json();
+
+        // Fallback to "week" if no suitable memes found
+        if (!data.data || !data.data.children.length) {
+            response = await fetch(`https://www.reddit.com/r/${subreddit}/hot.json?limit=50&t=week`, {
+                headers: { "User-Agent": "User-Agent": "DiscordBot/1.0" }
+            });
+            data = await response.json();
+        }
 
         if (!data.data || !data.data.children.length) {
             await interaction.editReply({
@@ -2005,14 +2023,15 @@ client.on("interactionCreate", async (interaction) => {
             break;
         }
 
-        // Filter for image posts and non-NSFW
+        // Filter for image posts, non-NSFW, non-stickied, and not recently shown
         const memes = data.data.children
             .filter(post => {
                 const url = post.data.url;
                 return (
-                    url.match(/\.(jpg|png|gif)$/) && 
-                    !post.data.over_18 && 
-                    !post.data.stickied
+                    url.match(/\.(jpg|png|gif)$/) &&
+                    !post.data.over_18 &&
+                    !post.data.stickied &&
+                    !shownMemes.has(url)
                 );
             })
             .map(post => ({
@@ -2024,15 +2043,29 @@ client.on("interactionCreate", async (interaction) => {
             }));
 
         if (!memes.length) {
+            // Clear cache if no new memes are available
+            shownMemes.clear();
             await interaction.editReply({
-                content: "❌ No suitable image memes found! Try again.",
+                content: "❌ No new memes available! Try again.",
                 flags: [InteractionResponseFlags.Ephemeral],
             });
             break;
         }
 
-        // Pick a random meme from the filtered list
-        const meme = memes[Math.floor(Math.random() * memes.length)];
+        // Shuffle memes to avoid predictable order
+        for (let i = memes.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [memes[i], memes[j]] = [memes[j], memes[i]];
+        }
+
+        // Pick the first meme and add to cache
+        const meme = memes[0];
+        shownMemes.add(meme.url);
+
+        // Limit cache size to 100 memes
+        if (shownMemes.size > 100) {
+            shownMemes.clear();
+        }
 
         const memeEmbed = new EmbedBuilder()
             .setTitle(meme.title || "Hot Meme")
