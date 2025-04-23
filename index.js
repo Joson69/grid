@@ -1990,24 +1990,70 @@ client.on("interactionCreate", async (interaction) => {
             
 
             case "meme": {
-              try {
-                  const response = await fetch('https://meme-api.com/gimme');
-                  const data = await response.json();
-                  if (!data.url || !data.url.match(/\.(jpg|png|gif)$/)) {
-                  return interaction.reply("❌ Couldn’t find an image meme right now!");
-              }
+    await interaction.deferReply();
+    try {
+        const response = await fetch("https://www.reddit.com/r/dankmemes/hot.json?limit=25&t=day", {
+            headers: { "User-Agent": "DiscordBot/1.0" } // Reddit requires a User-Agent
+        });
+        const data = await response.json();
+
+        if (!data.data || !data.data.children.length) {
+            await interaction.editReply({
+                content: "❌ Couldn’t fetch memes right now!",
+                flags: [InteractionResponseFlags.Ephemeral],
+            });
+            break;
+        }
+
+        // Filter for image posts and non-NSFW
+        const memes = data.data.children
+            .filter(post => {
+                const url = post.data.url;
+                return (
+                    url.match(/\.(jpg|png|gif)$/) && 
+                    !post.data.over_18 && 
+                    !post.data.stickied
+                );
+            })
+            .map(post => ({
+                title: post.data.title,
+                url: post.data.url,
+                subreddit: post.data.subreddit,
+                ups: post.data.ups,
+                postLink: `https://reddit.com${post.data.permalink}`
+            }));
+
+        if (!memes.length) {
+            await interaction.editReply({
+                content: "❌ No suitable image memes found! Try again.",
+                flags: [InteractionResponseFlags.Ephemeral],
+            });
+            break;
+        }
+
+        // Pick a random meme from the filtered list
+        const meme = memes[Math.floor(Math.random() * memes.length)];
+
         const memeEmbed = new EmbedBuilder()
-            .setTitle(data.title || "Random Meme")
-            .setImage(data.url)
-            .setFooter({ text: `From r/${data.subreddit} • ${data.ups} upvotes` })
-            .setColor(0xff9900);
-        await interaction.reply({ embeds: [memeEmbed] });
+            .setTitle(meme.title || "Hot Meme")
+            .setURL(meme.postLink)
+            .setImage(meme.url)
+            .setFooter({
+                text: `From r/${meme.subreddit} • ${meme.ups} upvotes`,
+                iconURL: interaction.user.displayAvatarURL(),
+            })
+            .setColor(0xff4500);
+
+        await interaction.editReply({ embeds: [memeEmbed] });
     } catch (error) {
-        console.error("Meme API Error:", error);
-        await interaction.reply("❌ Couldn’t fetch a meme right now!");
+        console.error("Reddit API Error:", error);
+        await interaction.editReply({
+            content: "❌ Failed to fetch a meme. Try again later!",
+            flags: [InteractionResponseFlags.Ephemeral],
+        });
     }
     break;
-  }
+}
         }
      } catch (error) {
         console.error("❌ Command Execution Error:", error);
