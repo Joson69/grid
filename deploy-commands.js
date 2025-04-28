@@ -17,144 +17,6 @@ const commands = [
             },
         ],
     },
-        {
-        name: "warn",
-        description: "Warns a user and logs the warning",
-        options: [
-            {
-                name: "user",
-                type: 6,
-                description: "The user to warn",
-                required: true,
-            },
-            {
-                name: "reason",
-                type: 3,
-                description: "Reason for the warning",
-                required: false,
-            },
-        ],
-    },
-    {
-        name: "warns",
-        description: "Shows the number of warnings a user has",
-        options: [
-            {
-                name: "user",
-                type: 6,
-                description: "The user to check warnings for",
-                required: true,
-            },
-        ],
-    },
-    {
-        name: "unban",
-        description: "Unbans a user by their user ID",
-        options: [
-            {
-                name: "user_id",
-                type: 3,
-                description: "The ID of the user to unban",
-                required: true,
-            },
-        ],
-    },
-    {
-    name: "trivia",
-    description: "Answer a random trivia question!",
-    options: [
-        {
-            name: "type",
-            description: "Type of question (truefalse or multiple)",
-            type: 3, // STRING
-            required: false,
-            choices: [
-                { name: "True/False", value: "boolean" },
-                { name: "Multiple Choice", value: "multiple" }
-            ]
-        }
-    ]
-},
-    {
-    name: "lyrics",
-    description: "Get lyrics for the song you’re currently listening to on Spotify"
-    },
-    {
-        name: "dadjoke",
-        description: "Sends a random dad joke",
-    },
-    {
-        name: "define",
-        description: "Fetches the definition of a word",
-        options: [
-            {
-                name: "word",
-                type: 3,
-                description: "The word to define",
-                required: true,
-            },
-        ],
-    },
-    {
-        name: "convert",
-        description: "Converts units (e.g., cm to inches, USD to EUR)",
-        options: [
-            {
-                name: "value",
-                type: 10,
-                description: "The numerical value to convert",
-                required: true,
-            },
-            {
-                name: "from",
-                type: 3,
-                description: "The unit to convert from",
-                required: true,
-            },
-            {
-                name: "to",
-                type: 3,
-                description: "The unit to convert to",
-                required: true,
-            },
-        ],
-    },
-    {
-    name: "translate",
-    description: "Translates a given text to another language",
-    options: [
-        {
-            name: "text",
-            type: 3,
-            description: "The text to translate",
-            required: true,
-        },
-        {
-            name: "language",
-            type: 3,
-            description: "The target language (e.g., en, fr, es)",
-            required: true,
-        },
-        {
-            name: "from",
-            type: 3,
-            description: "The source language (e.g., hi, fr, es) - optional, defaults to auto-detect",
-            required: false,
-        },
-    ],
-},
-    {
-        name: "ascii",
-        description: "Converts text into ASCII art",
-        options: [
-            {
-                name: "text",
-                type: 3,
-                description: "The text to convert",
-                required: true,
-            },
-        ],
-    },
     {
         name: "ban",
         description: "Bans a user from the server",
@@ -186,77 +48,9 @@ const commands = [
         ],
     },
     {
-    name: "coinflip",
-    description: "Flip a coin and bet on the outcome!",
-    options: [
-        {
-            name: "choice",
-            type: 3, // String
-            description: "Your choice: heads or tails",
-            required: true,
-            choices: [
-                { name: "Heads", value: "heads" },
-                { name: "Tails", value: "tails" }
-            ]
-        },
-        {
-            name: "bet",
-            type: 4, // Integer
-            description: "The amount to bet",
-            required: true,
-            min_value: 1
-        },
-    ],
-},
-    {
-    name: "balance",
-    description: "Check your virtual currency balance",
-    options: [
-        {
-            name: "user",
-            type: 6, // User
-            description: "The user to check the balance for (default: you)",
-            required: false
-        }
-    ]
-},
-    {
-    name: "leaderboard",
-    description: "Show the top users by virtual currency winnings",
-    options: [
-        {
-            name: "limit",
-            type: 4, // Integer
-            description: "Number of users to show (default: 10)",
-            required: false,
-            min_value: 1,
-            max_value: 20
-        }
-    ]
-},
-    {
-    name: "give",
-    description: "Give virtual currency to another user",
-    options: [
-        {
-            name: "user",
-            type: 6, // User
-            description: "The user to give currency to",
-            required: true
-        },
-        {
-            name: "amount",
-            type: 4, // Integer
-            description: "The amount to give",
-            required: true,
-            min_value: 1
-        }
-    ]
-},
-    {
-    name: "daily",
-    description: "Claim your daily virtual currency reward",
-},
+        name: "coinflip",
+        description: "Flips a coin and returns Heads or Tails",
+    },
     {
         name: "hello",
         description: "Replies with a friendly greeting!",
@@ -353,7 +147,21 @@ const commands = [
     },
     {
         name: "meme",
-        description: "Generate a random meme from internet",
+        description: "Generate a simple text-based meme",
+        options: [
+            {
+                name: "top",
+                type: 3, // String type
+                description: "Text for the top of the meme",
+                required: true,
+            },
+            {
+                name: "bottom",
+                type: 3, // String type
+                description: "Text for the bottom of the meme",
+                required: true,
+            },
+        ],
     },
     {
         name: "poll",
@@ -448,10 +256,6 @@ const commands = [
                 required: true,
             },
         ],
-    },
-    {
-        name: 'blackjack',
-        description: 'Play a game of blackjack against the bot!',
     },
     {
         name: "servericon",
@@ -572,6 +376,18 @@ const commands = [
         ],
     },
     {
+        name: "snipe",
+        description: "Retrieves a recently deleted message in the channel",
+        options: [
+            {
+                name: "user",
+                description: "Snipe a message from a specific user",
+                type: 6, // User
+                required: false,
+            },
+        ],
+    },
+    {
         name: "help",
         description:
             "Shows a list of commands or detailed info for a specific command",
@@ -606,37 +422,6 @@ const commands = [
         description: "Displays bot statistics and performance metrics",
     },
     {
-        name: "calculate",
-        description: "Performs a basic arithmetic calculation",
-        options: [
-            {
-                name: "number1",
-                type: 10, // Number type
-                description: "The first number",
-                required: true,
-            },
-            {
-                name: "operator",
-                type: 3, // String type
-                description: "The operation to perform",
-                required: true,
-                choices: [
-                    { name: "Add", value: "add" },
-                    { name: "Subtract", value: "subtract" },
-                    { name: "Multiply", value: "multiply" },
-                    { name: "Divide", value: "divide" },
-                ],
-            },
-            {
-                name: "number2",
-                type: 10, // Number type
-                description: "The second number",
-                required: true,
-            },
-        ],
-     },
-    },
-    {
         name: "quote",
         description: "Quotes a message by ID",
         options: [
@@ -661,26 +446,12 @@ const rest = new REST({ version: "10" }).setToken(token);
 
 (async () => {
     try {
-        console.log("Fetching existing commands...");
-        const existingCommands = await rest.get(
-            Routes.applicationGuildCommands(clientId, guildId)
-        );
-
-        console.log(`Deleting ${existingCommands.length} old commands...`);
-        for (const command of existingCommands) {
-            await rest.delete(
-                `${Routes.applicationGuildCommands(clientId, guildId)}/${command.id}`
-            );
-            console.log(`Deleted command: ${command.name}`);
-        }
-
-        console.log(`Registering ${commands.length} new commands...`);
-        await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
+        console.log("Started refreshing application (/) commands.");
+        await rest.put(Routes.applicationCommands(clientId), {
             body: commands,
         });
-
-        console.log("Successfully updated slash commands! ✅");
+        console.log("Successfully reloaded application (/) commands.");
     } catch (error) {
-        console.error("Error updating commands:", error);
+        console.error("Error registering slash commands:", error);
     }
 })();
