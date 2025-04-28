@@ -128,6 +128,19 @@ const languageMap = {
     german: "de",
 };
 
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.MessageContent,
+    ],
+});
+
+client.once("ready", () => {
+    console.log(`✅ Logged in as ${client.user.tag}!`);
+});
+
 // In-memory cache for deleted messages
 const deletedMessages = new Map(); // Map<channelId, Array<{ author, authorId, content, timestamp }>>
 
@@ -152,19 +165,6 @@ client.on("messageDelete", (message) => {
         const oldestChannel = deletedMessages.keys().next().value;
         deletedMessages.delete(oldestChannel);
     }
-});
-
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.MessageContent,
-    ],
-});
-
-client.once("ready", () => {
-    console.log(`✅ Logged in as ${client.user.tag}!`);
 });
 
 client.on("interactionCreate", async (interaction) => {
