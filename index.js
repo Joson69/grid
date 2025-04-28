@@ -115,7 +115,7 @@ function getUserCurrency(userId) {
   }
   return currencyData[userId];
 };
-  
+
 const { REST, Routes } = require('discord.js');
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
@@ -127,6 +127,32 @@ const languageMap = {
     spanish: "es",
     german: "de",
 };
+
+// In-memory cache for deleted messages
+const deletedMessages = new Map(); // Map<channelId, Array<{ author, authorId, content, timestamp }>>
+
+// Listen for deleted messages
+client.on("messageDelete", (message) => {
+    if (message.partial || !message.content || message.author.bot) return; // Skip partials, empty messages, or bot messages
+
+    const channelId = message.channel.id;
+    const messages = deletedMessages.get(channelId) || [];
+    messages.unshift({
+        author: message.author.tag,
+        authorId: message.author.id,
+        content: message.content,
+        timestamp: message.createdTimestamp,
+    });
+    // Keep only the last 5 messages per channel
+    if (messages.length > 5) messages.pop();
+    deletedMessages.set(channelId, messages);
+
+    // Optional: Limit cache to 100 channels
+    if (deletedMessages.size > 100) {
+        const oldestChannel = deletedMessages.keys().next().value;
+        deletedMessages.delete(oldestChannel);
+    }
+});
 
 const client = new Client({
     intents: [
@@ -425,7 +451,7 @@ client.on("interactionCreate", async (interaction) => {
             case "serverinfo": {
     await interaction.deferReply();
     const { guild } = interaction;
-    
+
     // Fetch members to ensure cache is populated
     try {
         await guild.members.fetch({ force: true });
@@ -1987,7 +2013,77 @@ client.on("interactionCreate", async (interaction) => {
     await interaction.reply({ embeds: [calcEmbed] });
     break;
 }
-            
+
+                case "snipe": {
+                    await interaction.deferReply({ ephemeral: true }); // Ephemeral defer for privacy
+
+                    if (!interaction.guild) {
+                        await interaction.editReply({
+                            content: "❌ This command can only be used in a server!",
+                            flags: [InteractionResponseFlags.Ephemeral],
+                        });
+                        break;
+                    }
+
+                    if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
+                        await interaction.editReply({
+                            content: "❌ You need the `Manage Messages` permission to use this command!",
+                            flags: [InteractionResponseFlags.Ephemeral],
+                        });
+                        break;
+                    }
+
+                    try {
+                        const channelId = interaction.channel.id;
+                        const targetUser = interaction.options.getUser("user");
+                        const messages = deletedMessages.get(channelId) || [];
+
+                        if (!messages.length) {
+                            await interaction.editReply({
+                                content: "❌ No recently deleted messages found in this channel!",
+                                flags: [InteractionResponseFlags.Ephemeral],
+                            });
+                            break;
+                        }
+
+                        // Find the most recent deleted message (optionally by user)
+                        const deletedMessage = targetUser
+                            ? messages.find(msg => msg.authorId === targetUser.id)
+                            : messages[0];
+
+                        if (!deletedMessage) {
+                            await interaction.editReply({
+                                content: targetUser
+                                    ? `❌ No recently deleted messages from ${targetUser.tag} found in this channel!`
+                                    : "❌ No recently deleted messages found!",
+                                flags: [InteractionResponseFlags.Ephemeral],
+                            });
+                            break;
+                        }
+
+                        const snipeEmbed = new EmbedBuilder()
+                            .setTitle("Sniped Deleted Message")
+                            .setDescription(`**Content**: ${deletedMessage.content}`)
+                            .addFields(
+                                { name: "Author", value: `<@${deletedMessage.authorId}> (${deletedMessage.author})`, inline: true },
+                                { name: "Sent", value: `<t:${Math.floor(deletedMessage.timestamp / 1000)}:R>`, inline: true }
+                            )
+                            .setColor(0xff0000)
+                            .setFooter({
+                                text: `Sniped by ${interaction.user.tag}`,
+                                iconURL: interaction.user.displayAvatarURL(),
+                            });
+
+                        await interaction.editReply({ embeds: [snipeEmbed], flags: [InteractionResponseFlags.Ephemeral] });
+                    } catch (error) {
+                        console.error("Snipe Error:", error);
+                        await interaction.editReply({
+                            content: "❌ Failed to snipe the deleted message!",
+                            flags: [InteractionResponseFlags.Ephemeral],
+                        });
+                    }
+                    break;
+                }
 
             case "meme": {
     await interaction.deferReply();
