@@ -2093,7 +2093,7 @@ client.on("interactionCreate", async (interaction) => {
     client.shownMemes = shownMemes; // Store on client to persist across commands
 
     // List of subreddits to cycle through
-    const subreddits = ["dankmemes", "memes", "wholesomememes"];
+    const subreddits = ["memes", "dankmemes", "animemes", "memeconomy", "prequelmemes", "historymemes"];
     const subreddit = subreddits[Math.floor(Math.random() * subreddits.length)];
 
     try {
