@@ -127,6 +127,17 @@ const languageMap = {
   german: "de",
 };
 
+// Load user data
+let userData = new Set(); // Use a Set to avoid duplicates
+if (fs.existsSync('users.json')) {
+  const rawData = JSON.parse(fs.readFileSync('users.json', 'utf8'));
+  userData = new Set(rawData); // Load existing users into the Set
+}
+
+function saveUserData() {
+  fs.writeFileSync('users.json', JSON.stringify([...userData], null, 2)); // Convert Set to Array for JSON storage
+}
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -169,11 +180,25 @@ client.on("messageDelete", (message) => {
   }
 });
 
-// Add this: Command to list servers
+// Log users who use message-based commands
 client.on("messageCreate", async (message) => {
+  if (message.author.bot) return; // Ignore bots
+
+  // Log the user
+  const userEntry = `${message.author.tag} (ID: ${message.author.id})`;
+  userData.add(userEntry);
+  saveUserData();
+
+  // Existing !servers command
   if (message.content === '!servers' && message.author.id === process.env.OWNER_ID) {
     const guilds = client.guilds.cache.map(guild => guild.name);
     await message.channel.send(`I am in ${guilds.length} servers:\n${guilds.join('\n')}`);
+  }
+
+  // New !users command to list users who have interacted with the bot
+  if (message.content === '!users' && message.author.id === process.env.OWNER_ID) {
+    const usersList = [...userData].join('\n') || 'No users have interacted with the bot yet.';
+    await message.channel.send(`Users who have used the bot:\n${usersList}`);
   }
 });
 
