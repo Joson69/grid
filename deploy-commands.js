@@ -147,21 +147,7 @@ const commands = [
     },
     {
         name: "meme",
-        description: "Generate a simple text-based meme",
-        options: [
-            {
-                name: "top",
-                type: 3, // String type
-                description: "Text for the top of the meme",
-                required: true,
-            },
-            {
-                name: "bottom",
-                type: 3, // String type
-                description: "Text for the bottom of the meme",
-                required: true,
-            },
-        ],
+        description: "Fetch a random meme from Reddit",
     },
     {
         name: "poll",
