@@ -7,30 +7,29 @@ app.get('/', (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  // Log removed as per your previous request
 });
 
 // Bot code starts here
 const {
-   Client,
-     GatewayIntentBits,
-     EmbedBuilder,
-     PermissionsBitField,
-     InteractionResponseFlags,
-     ChannelType,
-     ActionRowBuilder,
-     ButtonBuilder,
-     ButtonStyle,
- } = require("discord.js");
- const fetch = (...args) => import("node-fetch").then(({ default: fetch }) => fetch(...args));
- require("dotenv").config();
+  Client,
+  GatewayIntentBits,
+  EmbedBuilder,
+  PermissionsBitField,
+  InteractionResponseFlags,
+  ChannelType,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+} = require("discord.js");
+const fetch = (...args) => import("node-fetch").then(({ default: fetch }) => fetch(...args));
+require("dotenv").config();
 
 const { translate } = require('@vitalets/google-translate-api');
 const figlet = require('figlet');
 const fs = require('fs');
 const SpotifyWebApi = require('spotify-web-api-node');
 const lyricsFinder = require('lyrics-finder');
-// Import commands from commands.js
 
 // Initialize Spotify API
 const spotifyApi = new SpotifyWebApi({
@@ -114,31 +113,34 @@ function getUserCurrency(userId) {
     saveCurrencyData();
   }
   return currencyData[userId];
-};
+}
 
 const { REST, Routes } = require('discord.js');
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
 const languageMap = {
-    english: "en",
-    hindi: "hi",
-    french: "fr",
-    spanish: "es",
-    german: "de",
+  english: "en",
+  hindi: "hi",
+  french: "fr",
+  spanish: "es",
+  german: "de",
 };
 
 const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.MessageContent,
-    ],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.MessageContent,
+  ],
 });
 
 client.once("ready", () => {
-    console.log(`✅ Logged in as ${client.user.tag}!`);
+  console.log(`✅ Logged in as ${client.user.tag}!`);
+  // Add this: Log servers on startup
+  const guilds = client.guilds.cache.map(guild => guild.name);
+  console.log(`Bot is in ${guilds.length} servers: ${guilds.join(', ')}`);
 });
 
 // In-memory cache for deleted messages
@@ -146,50 +148,59 @@ const deletedMessages = new Map(); // Map<channelId, Array<{ author, authorId, c
 
 // Listen for deleted messages
 client.on("messageDelete", (message) => {
-    if (message.partial || !message.content || message.author.bot) return; // Skip partials, empty messages, or bot messages
+  if (message.partial || !message.content || message.author.bot) return; // Skip partials, empty messages, or bot messages
 
-    const channelId = message.channel.id;
-    const messages = deletedMessages.get(channelId) || [];
-    messages.unshift({
-        author: message.author.tag,
-        authorId: message.author.id,
-        content: message.content,
-        timestamp: message.createdTimestamp,
-    });
-    // Keep only the last 5 messages per channel
-    if (messages.length > 5) messages.pop();
-    deletedMessages.set(channelId, messages);
+  const channelId = message.channel.id;
+  const messages = deletedMessages.get(channelId) || [];
+  messages.unshift({
+    author: message.author.tag,
+    authorId: message.author.id,
+    content: message.content,
+    timestamp: message.createdTimestamp,
+  });
+  // Keep only the last 5 messages per channel
+  if (messages.length > 5) messages.pop();
+  deletedMessages.set(channelId, messages);
 
-    // Optional: Limit cache to 100 channels
-    if (deletedMessages.size > 100) {
-        const oldestChannel = deletedMessages.keys().next().value;
-        deletedMessages.delete(oldestChannel);
-    }
+  // Optional: Limit cache to 100 channels
+  if (deletedMessages.size > 100) {
+    const oldestChannel = deletedMessages.keys().next().value;
+    deletedMessages.delete(oldestChannel);
+  }
 });
 
-client.on("interactionCreate", async (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
+// Add this: Command to list servers
+client.on("messageCreate", async (message) => {
+  if (message.content === '!servers' && message.author.id === process.env.OWNER_ID) {
+    const guilds = client.guilds.cache.map(guild => guild.name);
+    await message.channel.send(`I am in ${guilds.length} servers:\n${guilds.join('\n')}`);
+  }
+});
 
-    try {
-        switch (interaction.commandName) {
-            case "avatar": {
-                const avatarUser = interaction.options.getUser("user") || interaction.user;
-                const avatarEmbed = new EmbedBuilder()
-                    .setTitle(`🖼️ Avatar: ${avatarUser.tag}`)
-                    .setImage(
-                        avatarUser.displayAvatarURL({
-                            dynamic: true,
-                            size: 1024,
-                        }),
-                    )
-                    .setColor(0x3498db)
-                    .setFooter({
-                        text: `Requested by ${interaction.user.tag}`,
-                        iconURL: interaction.user.displayAvatarURL(),
-                    });
-                await interaction.reply({ embeds: [avatarEmbed] });
-                break;
-            }
+// Your existing interactionCreate handler
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
+
+  try {
+    switch (interaction.commandName) {
+      case "avatar": {
+        const avatarUser = interaction.options.getUser("user") || interaction.user;
+        const avatarEmbed = new EmbedBuilder()
+          .setTitle(`🖼️ Avatar: ${avatarUser.tag}`)
+          .setImage(
+            avatarUser.displayAvatarURL({
+              dynamic: true,
+              size: 1024,
+            }),
+          )
+          .setColor(0x3498db)
+          .setFooter({
+            text: `Requested by ${interaction.user.tag}`,
+            iconURL: interaction.user.displayAvatarURL(),
+          });
+        await interaction.reply({ embeds: [avatarEmbed] });
+        break;
+      }
 
             case "ban": {
                 if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
@@ -2015,73 +2026,51 @@ client.on("interactionCreate", async (interaction) => {
 }
 
                 case "snipe": {
-                    await interaction.deferReply({ ephemeral: true }); // Ephemeral defer for privacy
+                    await interaction.deferReply({ ephemeral: true });
+                    const user = interaction.options.getUser("user");
+                    const channelId = interaction.channel.id;
+                    const messages = snipedMessages.get(channelId) || [];
 
-                    if (!interaction.guild) {
+                    if (!messages.length) {
                         await interaction.editReply({
-                            content: "❌ This command can only be used in a server!",
-                            flags: [InteractionResponseFlags.Ephemeral],
+                            content: "❌ No deleted messages to snipe in this channel!",
+                            ephemeral: false,
                         });
                         break;
                     }
 
-                    if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
+                    let snipedMessage;
+                    if (user) {
+                        snipedMessage = messages
+                            .slice()
+                            .reverse()
+                            .find(msg => msg.author.id === user.id);
+                    } else {
+                        snipedMessage = messages[messages.length - 1];
+                    }
+
+                    if (!snipedMessage) {
                         await interaction.editReply({
-                            content: "❌ You need the `Manage Messages` permission to use this command!",
-                            flags: [InteractionResponseFlags.Ephemeral],
+                            content: user ? `❌ No deleted messages from ${user.tag} to snipe!` : "❌ No deleted messages to snipe!",
+                            ephemeral: false,
                         });
                         break;
                     }
 
-                    try {
-                        const channelId = interaction.channel.id;
-                        const targetUser = interaction.options.getUser("user");
-                        const messages = deletedMessages.get(channelId) || [];
-
-                        if (!messages.length) {
-                            await interaction.editReply({
-                                content: "❌ No recently deleted messages found in this channel!",
-                                flags: [InteractionResponseFlags.Ephemeral],
-                            });
-                            break;
-                        }
-
-                        // Find the most recent deleted message (optionally by user)
-                        const deletedMessage = targetUser
-                            ? messages.find(msg => msg.authorId === targetUser.id)
-                            : messages[0];
-
-                        if (!deletedMessage) {
-                            await interaction.editReply({
-                                content: targetUser
-                                    ? `❌ No recently deleted messages from ${targetUser.tag} found in this channel!`
-                                    : "❌ No recently deleted messages found!",
-                                flags: [InteractionResponseFlags.Ephemeral],
-                            });
-                            break;
-                        }
-
-                        const snipeEmbed = new EmbedBuilder()
-                            .setTitle("Sniped Deleted Message")
-                            .setDescription(`**Content**: ${deletedMessage.content}`)
-                            .addFields(
-                                { name: "Author", value: `<@${deletedMessage.authorId}> (${deletedMessage.author})`, inline: true },
-                                { name: "Sent", value: `<t:${Math.floor(deletedMessage.timestamp / 1000)}:R>`, inline: true }
-                            )
-                            .setColor(0xff0000)
-                            .setFooter({
-                                text: `Sniped by ${interaction.user.tag}`,
-                                iconURL: interaction.user.displayAvatarURL(),
-                            });
-
-                        await interaction.editReply({ embeds: [snipeEmbed], flags: [InteractionResponseFlags.Ephemeral] });
-                    } catch (error) {
-                        console.error("Snipe Error:", error);
-                        await interaction.editReply({
-                            content: "❌ Failed to snipe the deleted message!",
-                            flags: [InteractionResponseFlags.Ephemeral],
+                    const snipeEmbed = new EmbedBuilder()
+                        .setDescription(snipedMessage.content || "[No content]")
+                        .setAuthor({
+                            name: snipedMessage.author.tag,
+                            iconURL: snipedMessage.author.displayAvatarURL(),
+                        })
+                        .setTimestamp(snipedMessage.createdAt)
+                        .setColor(0x00ff00)
+                        .setFooter({
+                            text: `Requested by ${interaction.user.tag}`,
+                            iconURL: interaction.user.displayAvatarURL(),
                         });
-                    }
+
+                    await interaction.editReply({ embeds: [snipeEmbed], ephemeral: false });
                     break;
                 }
 
