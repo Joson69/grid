@@ -25,6 +25,7 @@ const {
 const fetch = (...args) => import("node-fetch").then(({ default: fetch }) => fetch(...args));
 require("dotenv").config();
 
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { translate } = require('@vitalets/google-translate-api');
 const figlet = require('figlet');
 const fs = require('fs');
@@ -138,6 +139,9 @@ function saveUserData() {
   fs.writeFileSync('users.json', JSON.stringify([...userData], null, 2)); // Convert Set to Array for JSON storage
 }
 
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -188,6 +192,49 @@ client.on("messageCreate", async (message) => {
   const userEntry = `${message.author.tag} (ID: ${message.author.id})`;
   userData.add(userEntry);
   saveUserData();
+
+   // Respond to bot mentions using Gemini API
+  if (message.mentions.has(client.user)) {
+    const userMessage = message.content
+      .replace(new RegExp(`<@!?${client.user.id}>`), "")
+      .trim();
+
+    if (!userMessage) {
+      await message.reply("Please provide a message for me to respond to!");
+      return;
+    }
+
+    try {
+      const generationConfig = {
+        temperature: 0.9,
+        topK: 1,
+        topP: 1,
+        maxOutputTokens: 2000, // Discord message limit
+      };
+
+      const parts = [{ text: userMessage }];
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts }],
+        generationConfig,
+      });
+
+      let reply = result.response.text();
+
+      // Handle Discord's 2000-character limit
+      if (reply.length > 2000) {
+        const replyArray = reply.match(/[\s\S]{1,2000}/g);
+        for (const msg of replyArray) {
+          await message.reply(msg);
+        }
+      } else {
+        await message.reply(reply);
+      }
+    } catch (error) {
+      console.error("Error with Gemini API:", error);
+      await message.reply("Sorry, I encountered an error while processing your request.");
+    }
+    return;
+  }
 
   // Existing !servers command
   if (message.content === '!servers' && message.author.id === process.env.OWNER_ID) {
