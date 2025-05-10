@@ -2145,6 +2145,38 @@ client.on("interactionCreate", async (interaction) => {
                     await interaction.editReply({ embeds: [snipeEmbed], ephemeral: false });
                     break;
                 }
+        case "ask": {
+        const prompt = interaction.options.getString("prompt");
+
+        try {
+          const generationConfig = {
+            temperature: 0.9,
+            topK: 1,
+            topP: 1,
+            maxOutputTokens: 2000,
+          };
+
+          const parts = [{ text: prompt }];
+          const result = await model.generateContent({
+            contents: [{ role: "user", parts }],
+            generationConfig,
+          });
+
+          let reply = result.response.text();
+          if (reply.length > 2000) {
+            const replyArray = reply.match(/[\s\S]{1,2000}/g);
+            for (const msg of replyArray) {
+              await interaction.followUp(msg);
+            }
+          } else {
+            await interaction.reply(reply);
+          }
+        } catch (error) {
+          console.error("Error with Gemini API:", error);
+          await interaction.reply("Sorry, I encountered an error while processing your request.");
+        }
+        break;
+      }
 
             case "meme": {
     await interaction.deferReply();
