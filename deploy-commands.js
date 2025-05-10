@@ -18,6 +18,18 @@ const commands = [
         ],
     },
     {
+    name: 'ask',
+    description: 'Ask a question to the Gemini AI',
+    options: [
+      {
+        name: 'prompt',
+        type: 3, // STRING type
+        description: 'Your question or prompt for the AI',
+        required: true,
+      },
+    ],
+  },
+    {
         name: "ban",
         description: "Bans a user from the server",
         options: [
