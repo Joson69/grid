@@ -306,44 +306,50 @@ client.on("interactionCreate", async (interaction) => {
                 break;
             }
 
-            case "clear": {
-                if (interaction.channel.type !== ChannelType.GuildText) {
-                    return interaction.reply({
-                        content: "❌ This command can only be used in text channels!",
-                        flags: [InteractionResponseFlags.Ephemeral],
-                    });
-                }
-                if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-                    return interaction.reply({
-                        content: "❌ You don’t have permission to delete messages!",
-                        flags: [InteractionResponseFlags.Ephemeral],
-                    });
-                }
-                if (!interaction.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-                    return interaction.reply({
-                        content: "❌ I don’t have permission to delete messages!",
-                        flags: [InteractionResponseFlags.Ephemeral],
-                    });
-                }
-                const amount = interaction.options.getInteger("amount");
-                if (amount < 1 || amount > 100) {
-                    return interaction.reply({
-                        content: "❌ Please specify a number between 1 and 100!",
-                        flags: [InteractionResponseFlags.Ephemeral],
-                    });
-                }
+            case "ask": {
+                // Add this line at the beginning:
+                await interaction.deferReply(); // Acknowledge the interaction immediately
+
+                const prompt = interaction.options.getString("prompt");
                 try {
-                    const messages = await interaction.channel.bulkDelete(amount, true);
-                    await interaction.reply({
-                        content: `🗑️ Deleted **${messages.size}** messages.`,
-                        flags: [InteractionResponseFlags.Ephemeral],
-                    });
+                  const generationConfig = {
+                    temperature: 0.9,
+                    topK: 1,
+                    topP: 1,
+                    maxOutputTokens: 2000,
+                  };
+                  const parts = [{ text: prompt }];
+                  const result = await model.generateContent({
+                    contents: [{ role: "user", parts }],
+                    generationConfig,
+                  });
+                  let reply = result.response.text();
+
+                  // Add a check for empty reply as discussed before
+                  if (!reply || reply.trim().length === 0) {
+                      console.warn("Gemini API returned empty response for /ask command.");
+                      // Use editReply after deferring
+                      await interaction.editReply("Sorry, I couldn't generate a response for that right now.");
+                      return;
+                  }
+
+                  // Handle Discord's 2000-character limit
+                  if (reply.length > 2000) {
+                    const replyArray = reply.match(/[\s\S]{1,2000}/g);
+                    // For the first part, use editReply
+                    await interaction.editReply(replyArray[0]);
+                    // For subsequent parts, use followUp
+                    for (let i = 1; i < replyArray.length; i++) {
+                      await interaction.followUp(replyArray[i]);
+                    }
+                  } else {
+                    // If the reply is short, use editReply after deferring
+                    await interaction.editReply(reply);
+                  }
                 } catch (error) {
-                    console.error("Clear Error:", error);
-                    await interaction.reply({
-                        content: "❌ Error deleting messages.",
-                        flags: [InteractionResponseFlags.Ephemeral],
-                    });
+                  console.error("Error with Gemini API:", error);
+                  // Use editReply in the catch block after deferring
+                  await interaction.editReply("Sorry, I encountered an error while processing your request.");
                 }
                 break;
             }
