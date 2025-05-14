@@ -60,18 +60,6 @@ const commands = [
         ],
     },
     {
-        name: "clear",
-        description: "Deletes a specified number of messages",
-        options: [
-            {
-                name: "amount",
-                type: 4, // Integer type
-                description: "Number of messages to delete (max 100)",
-                required: true,
-            },
-        ],
-    },
-    {
         name: "coinflip",
         description: "Flips a coin and returns Heads or Tails",
     },
