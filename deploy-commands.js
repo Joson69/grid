@@ -18,6 +18,18 @@ const commands = [
         ],
     },
     {
+      name: 'wikipedia',
+      description: 'Searches Wikipedia for a given query and returns a summary.',
+      options: [
+           {  
+               name: 'query',
+               description: 'The term you want to search on Wikipedia.',
+               type: 3, // 3 corresponds to String
+               required: true,
+           },
+       ],
+   },
+    {
     name: 'ask',
     description: 'Ask a question to the Gemini AI',
     options: [
