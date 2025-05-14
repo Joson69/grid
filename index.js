@@ -2178,6 +2178,63 @@ client.on("interactionCreate", async (interaction) => {
         break;
       }
 
+            case "wikipedia": {
+                await interaction.deferReply(); // Defer the reply as the API call might take time.
+
+                const query = interaction.options.getString("query");
+                const apiUrl = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrlimit=1&prop=extracts&exchars=1000&exintro=true&explaintext=true&format=json&origin=*`;
+
+                try {
+                    const response = await fetch(apiUrl);
+                    const data = await response.json();
+
+                    if (!data.query || !data.query.pages) {
+                        await interaction.editReply({
+                            content: `❌ Could not find any results for "${query}" on Wikipedia.`,
+                            ephemeral: false,
+                        });
+                        return;
+                    }
+
+                    // Wikipedia API returns pages in an object where keys are page IDs
+                    const pages = data.query.pages;
+                    const pageId = Object.keys(pages)[0]; // Get the first page ID
+                    const page = pages[pageId];
+
+                    if (!page.extract) {
+                         await interaction.editReply({
+                            content: `❌ Could not find a summary for "${query}" on Wikipedia.`,
+                            ephemeral: false,
+                        });
+                        return;
+                    }
+
+                    const title = page.title;
+                    const extract = page.extract;
+                    const pageUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, '_'))}`; // Construct the Wikipedia page URL
+
+                    const wikiEmbed = new EmbedBuilder()
+                        .setTitle(`📚 Wikipedia: ${title}`)
+                        .setDescription(extract + `\n\n[Read more on Wikipedia](${pageUrl})`) // Add a link to the full page
+                        .setColor(0x00aaff) // Wikipedia blue
+                        .setFooter({
+                            text: `Requested by ${interaction.user.tag}`,
+                            iconURL: interaction.user.displayAvatarURL(),
+                        });
+
+                    await interaction.editReply({ embeds: [wikiEmbed] });
+
+                } catch (error) {
+                    console.error("Wikipedia API Error:", error);
+                    await interaction.editReply({
+                        content: "❌ Failed to fetch information from Wikipedia. Please try again later.",
+                        ephemeral: true,
+                    });
+                }
+                break;
+            }
+          
+
             case "meme": {
     await interaction.deferReply();
 
