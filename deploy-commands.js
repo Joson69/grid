@@ -109,7 +109,30 @@ const commands = [
             },
         ],
     },
-    // Add these to the commands array
+    {
+    name: 'translate',
+    description: 'Translates text to another language using Google Cloud.',
+    options: [
+        {
+            name: 'text',
+            description: 'The text you want to translate.',
+            type: 3, // String
+            required: true, // Required: You must provide the text
+        },
+        {
+            name: 'language',
+            description: 'The target language (e.g., en, es, hindi).',
+            type: 3, // String
+            required: true, // Required: You must specify the target language
+        },
+        {
+            name: 'from',
+            description: 'The source language (optional, e.g., en, es).',
+            type: 3, // String
+            required: false, // Optional: The API can detect if not provided
+        },
+    ],
+},
     {
         name: "rps",
         description: "Play Rock, Paper, Scissors with the bot!",
