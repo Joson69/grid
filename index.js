@@ -26,11 +26,14 @@ const fetch = (...args) => import("node-fetch").then(({ default: fetch }) => fet
 require("dotenv").config();
 
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const { translate } = require('@vitalets/google-translate-api');
+const { TranslationServiceClient } = require('@google-cloud/translate');
 const figlet = require('figlet');
 const fs = require('fs');
 const SpotifyWebApi = require('spotify-web-api-node');
 const lyricsFinder = require('lyrics-finder');
+
+const translationClient = new TranslationServiceClient();
+const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
 
 // Initialize Spotify API
 const spotifyApi = new SpotifyWebApi({
@@ -1925,45 +1928,39 @@ client.on("interactionCreate", async (interaction) => {
 }
 
             case "translate": {
+    await interaction.deferReply(); // Defer the reply
+
     const text = interaction.options.getString("text");
     let toLang = interaction.options.getString("language") || "en";
-    const fromLang = interaction.options.getString("from"); // Get the source language if provided
-
-    // Map full language names to codes
-    toLang = languageMap[toLang.toLowerCase()] || toLang;
-    const fromLangMapped = fromLang ? (languageMap[fromLang.toLowerCase()] || fromLang) : undefined;
+    const fromLang = interaction.options.getString("from");
 
     try {
-        console.log(`Translating: "${text}" from ${fromLangMapped || "auto"} to ${toLang}`);
-        const translateOptions = { to: toLang };
-        if (fromLangMapped) {
-            translateOptions.from = fromLangMapped; // Specify the source language if provided
-        }
-        const result = await translate(text, translateOptions);
-        console.log("Translation Result:", result);
-
-        const languageNames = {
-            hi: "Hindi",
-            en: "English",
-            fr: "French",
-            es: "Spanish",
-            de: "German",
+        const request = {
+            parent: `projects/${projectId}/locations/global`,
+            contents: [text],
+            mimeType: 'text/plain',
+            targetLanguageCode: toLang,
+            sourceLanguageCode: fromLang || '',
         };
-        const fromLangName = languageNames[result.raw.src] || result.raw.src;
-        const toLangName = languageNames[toLang] || toLang;
+
+        const [response] = await translationClient.translateText(request);
+        const translation = response.translations[0].translatedText;
+        const detectedSourceLanguage = response.translations[0].detectedLanguageCode;
 
         const translationEmbed = new EmbedBuilder()
             .setTitle("Translation")
             .addFields(
                 { name: "Original", value: text, inline: false },
-                { name: `Translated (${fromLangName} → ${toLangName})`, value: result.text, inline: false }
+                { name: `Translated (${detectedSourceLanguage || 'auto'} → ${toLang})`, value: translation, inline: false }
             )
             .setColor(0x00ff00)
             .setFooter({ text: `Requested by ${interaction.user.tag}` });
-        await interaction.reply({ embeds: [translationEmbed] });
+
+        await interaction.editReply({ embeds: [translationEmbed] });
+
     } catch (error) {
-        console.error("Translation Error Details:", error.message, error.stack);
-        await interaction.reply("❌ Couldn’t translate the text—try again later! (Check logs for details)");
+        console.error("Google Cloud Translation API Error:", error);
+        await interaction.editReply("❌ Couldn’t translate the text using Google Cloud. Please try again later!");
     }
     break;
 }
