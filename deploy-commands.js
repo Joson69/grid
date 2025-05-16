@@ -18,6 +18,30 @@ const commands = [
         ],
     },
     {
+      name: 'wikipedia',
+      description: 'Searches Wikipedia for a given query and returns a summary.',
+      options: [
+           {  
+               name: 'query',
+               description: 'The term you want to search on Wikipedia.',
+               type: 3, // 3 corresponds to String
+               required: true,
+           },
+       ],
+   },
+    {
+    name: 'ask',
+    description: 'Ask a question to the Gemini AI',
+    options: [
+      {
+        name: 'prompt',
+        type: 3, // STRING type
+        description: 'Your question or prompt for the AI',
+        required: true,
+      },
+    ],
+  },
+    {
         name: "ban",
         description: "Bans a user from the server",
         options: [
@@ -32,18 +56,6 @@ const commands = [
                 type: 3, // String type
                 description: "Reason for the ban",
                 required: false,
-            },
-        ],
-    },
-    {
-        name: "clear",
-        description: "Deletes a specified number of messages",
-        options: [
-            {
-                name: "amount",
-                type: 4, // Integer type
-                description: "Number of messages to delete (max 100)",
-                required: true,
             },
         ],
     },

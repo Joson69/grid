@@ -140,7 +140,7 @@ function saveUserData() {
 }
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-preview-04-17" });
 
 const client = new Client({
   intents: [
@@ -306,44 +306,50 @@ client.on("interactionCreate", async (interaction) => {
                 break;
             }
 
-            case "clear": {
-                if (interaction.channel.type !== ChannelType.GuildText) {
-                    return interaction.reply({
-                        content: "❌ This command can only be used in text channels!",
-                        flags: [InteractionResponseFlags.Ephemeral],
-                    });
-                }
-                if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-                    return interaction.reply({
-                        content: "❌ You don’t have permission to delete messages!",
-                        flags: [InteractionResponseFlags.Ephemeral],
-                    });
-                }
-                if (!interaction.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-                    return interaction.reply({
-                        content: "❌ I don’t have permission to delete messages!",
-                        flags: [InteractionResponseFlags.Ephemeral],
-                    });
-                }
-                const amount = interaction.options.getInteger("amount");
-                if (amount < 1 || amount > 100) {
-                    return interaction.reply({
-                        content: "❌ Please specify a number between 1 and 100!",
-                        flags: [InteractionResponseFlags.Ephemeral],
-                    });
-                }
+            case "ask": {
+                // Add this line at the beginning:
+                await interaction.deferReply(); // Acknowledge the interaction immediately
+
+                const prompt = interaction.options.getString("prompt");
                 try {
-                    const messages = await interaction.channel.bulkDelete(amount, true);
-                    await interaction.reply({
-                        content: `🗑️ Deleted **${messages.size}** messages.`,
-                        flags: [InteractionResponseFlags.Ephemeral],
-                    });
+                  const generationConfig = {
+                    temperature: 0.9,
+                    topK: 1,
+                    topP: 1,
+                    maxOutputTokens: 2000,
+                  };
+                  const parts = [{ text: prompt }];
+                  const result = await model.generateContent({
+                    contents: [{ role: "user", parts }],
+                    generationConfig,
+                  });
+                  let reply = result.response.text();
+
+                  // Add a check for empty reply as discussed before
+                  if (!reply || reply.trim().length === 0) {
+                      console.warn("Gemini API returned empty response for /ask command.");
+                      // Use editReply after deferring
+                      await interaction.editReply("Sorry, I couldn't generate a response for that right now.");
+                      return;
+                  }
+
+                  // Handle Discord's 2000-character limit
+                  if (reply.length > 2000) {
+                    const replyArray = reply.match(/[\s\S]{1,2000}/g);
+                    // For the first part, use editReply
+                    await interaction.editReply(replyArray[0]);
+                    // For subsequent parts, use followUp
+                    for (let i = 1; i < replyArray.length; i++) {
+                      await interaction.followUp(replyArray[i]);
+                    }
+                  } else {
+                    // If the reply is short, use editReply after deferring
+                    await interaction.editReply(reply);
+                  }
                 } catch (error) {
-                    console.error("Clear Error:", error);
-                    await interaction.reply({
-                        content: "❌ Error deleting messages.",
-                        flags: [InteractionResponseFlags.Ephemeral],
-                    });
+                  console.error("Error with Gemini API:", error);
+                  // Use editReply in the catch block after deferring
+                  await interaction.editReply("Sorry, I encountered an error while processing your request.");
                 }
                 break;
             }
@@ -2145,6 +2151,95 @@ client.on("interactionCreate", async (interaction) => {
                     await interaction.editReply({ embeds: [snipeEmbed], ephemeral: false });
                     break;
                 }
+        case "ask": {
+        const prompt = interaction.options.getString("prompt");
+
+        try {
+          const generationConfig = {
+            temperature: 0.9,
+            topK: 1,
+            topP: 1,
+            maxOutputTokens: 2000,
+          };
+
+          const parts = [{ text: prompt }];
+          const result = await model.generateContent({
+            contents: [{ role: "user", parts }],
+            generationConfig,
+          });
+
+          let reply = result.response.text();
+          if (reply.length > 2000) {
+            const replyArray = reply.match(/[\s\S]{1,2000}/g);
+            for (const msg of replyArray) {
+              await interaction.followUp(msg);
+            }
+          } else {
+            await interaction.reply(reply);
+          }
+        } catch (error) {
+          console.error("Error with Gemini API:", error);
+          await interaction.reply("Sorry, I encountered an error while processing your request.");
+        }
+        break;
+      }
+
+            case "wikipedia": {
+                await interaction.deferReply(); // Defer the reply as the API call might take time.
+
+                const query = interaction.options.getString("query");
+                const apiUrl = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrlimit=1&prop=extracts&exchars=1000&exintro=true&explaintext=true&format=json&origin=*`;
+
+                try {
+                    const response = await fetch(apiUrl);
+                    const data = await response.json();
+
+                    if (!data.query || !data.query.pages) {
+                        await interaction.editReply({
+                            content: `❌ Could not find any results for "${query}" on Wikipedia.`,
+                            ephemeral: false,
+                        });
+                        return;
+                    }
+
+                    // Wikipedia API returns pages in an object where keys are page IDs
+                    const pages = data.query.pages;
+                    const pageId = Object.keys(pages)[0]; // Get the first page ID
+                    const page = pages[pageId];
+
+                    if (!page.extract) {
+                         await interaction.editReply({
+                            content: `❌ Could not find a summary for "${query}" on Wikipedia.`,
+                            ephemeral: false,
+                        });
+                        return;
+                    }
+
+                    const title = page.title;
+                    const extract = page.extract;
+                    const pageUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, '_'))}`; // Construct the Wikipedia page URL
+
+                    const wikiEmbed = new EmbedBuilder()
+                        .setTitle(`📚 Wikipedia: ${title}`)
+                        .setDescription(extract + `\n\n[Read more on Wikipedia](${pageUrl})`) // Add a link to the full page
+                        .setColor(0x00aaff) // Wikipedia blue
+                        .setFooter({
+                            text: `Requested by ${interaction.user.tag}`,
+                            iconURL: interaction.user.displayAvatarURL(),
+                        });
+
+                    await interaction.editReply({ embeds: [wikiEmbed] });
+
+                } catch (error) {
+                    console.error("Wikipedia API Error:", error);
+                    await interaction.editReply({
+                        content: "❌ Failed to fetch information from Wikipedia. Please try again later.",
+                        ephemeral: true,
+                    });
+                }
+                break;
+            }
+          
 
             case "meme": {
     await interaction.deferReply();
