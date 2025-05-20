@@ -29,8 +29,14 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { TranslationServiceClient } = require('@google-cloud/translate');
 const figlet = require('figlet');
 const fs = require('fs');
+const path = require('path');
 const SpotifyWebApi = require('spotify-web-api-node');
 const lyricsFinder = require('lyrics-finder');
+
+const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+const credentialsPath = path.resolve('./google-credentials.json');
+fs.writeFileSync(credentialsPath, JSON.stringify(credentials));
+process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
 
 const translationClient = new TranslationServiceClient();
 const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
