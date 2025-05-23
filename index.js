@@ -27,6 +27,7 @@ require("dotenv").config();
 
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { TranslationServiceClient } = require('@google-cloud/translate');
+const vision = require('@google-cloud/vision');
 const figlet = require('figlet');
 const fs = require('fs');
 const path = require('path');
@@ -38,6 +39,7 @@ const credentialsPath = path.resolve('./google-credentials.json');
 fs.writeFileSync(credentialsPath, JSON.stringify(credentials));
 process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
 
+const visionClient = new vision.ImageAnnotatorClient();
 const translationClient = new TranslationServiceClient();
 const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
 
@@ -2314,6 +2316,152 @@ client.on("interactionCreate", async (interaction) => {
         }
         break;
     }
+
+
+        case "ocr": {
+        await interaction.deferReply(); // Acknowledge the interaction immediately.
+
+        const imageUrl = interaction.options.getString("image_url") || (interaction.options.getAttachment("image_attachment") ? interaction.options.getAttachment("image_attachment").url : null);
+
+        if (!imageUrl) {
+            return interaction.editReply({
+                content: "❌ Please provide an image URL or attach an image to analyze for text.",
+                ephemeral: true,
+            });
+        }
+
+        try {
+            const [result] = await visionClient.textDetection(imageUrl);
+            const detections = result.textAnnotations;
+
+            if (detections && detections.length > 0) {
+                const fullText = detections[0].description; // The first detection is usually the full text
+                const textEmbed = new EmbedBuilder()
+                    .setTitle("📝 Text Detected in Image")
+                    .setDescription(`\`\`\`\n${fullText.substring(0, 1900)}\n\`\`\`` + (fullText.length > 1900 ? "\n... (text truncated)" : ""))
+                    .setColor(0xF4B400) // Google yellow
+                    .setFooter({
+                        text: `Requested by ${interaction.user.tag}`,
+                        iconURL: interaction.user.displayAvatarURL(),
+                    });
+                await interaction.editReply({ embeds: [textEmbed] });
+            } else {
+                await interaction.editReply({
+                    content: "🔎 No text found in the provided image.",
+                    ephemeral: false,
+                });
+            }
+        } catch (error) {
+            console.error("Cloud Vision OCR Error:", error);
+            await interaction.editReply({
+                content: "❌ Failed to analyze image for text. Ensure it's a valid image URL.",
+                ephemeral: true,
+            });
+        }
+        break;
+      }
+
+      case "detectobjects": {
+        await interaction.deferReply();
+
+        const imageUrl = interaction.options.getString("image_url") || (interaction.options.getAttachment("image_attachment") ? interaction.options.getAttachment("image_attachment").url : null);
+
+        if (!imageUrl) {
+            return interaction.editReply({
+                content: "❌ Please provide an image URL or attach an image to detect objects.",
+                ephemeral: true,
+            });
+        }
+
+        try {
+            const [result] = await visionClient.objectLocalization(imageUrl);
+            const objects = result.localizedObjectAnnotations;
+
+            if (objects && objects.length > 0) {
+                const objectNames = objects.map(obj => `${obj.name} (${(obj.score * 100).toFixed(1)}%)`);
+                const objectEmbed = new EmbedBuilder()
+                    .setTitle("📦 Objects Detected in Image")
+                    .setDescription(objectNames.join('\n') || "No prominent objects detected.")
+                    .setImage(imageUrl) // Show the image in the embed
+                    .setColor(0x0F9D58) // Google green
+                    .setFooter({
+                        text: `Requested by ${interaction.user.tag}`,
+                        iconURL: interaction.user.displayAvatarURL(),
+                    });
+                await interaction.editReply({ embeds: [objectEmbed] });
+            } else {
+                await interaction.editReply({
+                    content: "🔎 No significant objects detected in the provided image.",
+                    ephemeral: false,
+                });
+            }
+        } catch (error) {
+            console.error("Cloud Vision Object Detection Error:", error);
+            await interaction.editReply({
+                content: "❌ Failed to detect objects in the image. Ensure it's a valid image URL.",
+                ephemeral: true,
+            });
+        }
+        break;
+      }
+
+      case "safesearch": {
+        await interaction.deferReply();
+
+        const imageUrl = interaction.options.getString("image_url") || (interaction.options.getAttachment("image_attachment") ? interaction.options.getAttachment("image_attachment").url : null);
+
+        if (!imageUrl) {
+            return interaction.editReply({
+                content: "❌ Please provide an image URL or attach an image to perform safe search detection.",
+                ephemeral: true,
+            });
+        }
+
+        try {
+            const [result] = await visionClient.safeSearchDetection(imageUrl);
+            const safeSearchResult = result.safeSearchAnnotation;
+
+            if (safeSearchResult) {
+                const detectionLevels = {
+                    VERY_UNLIKELY: "Very Unlikely",
+                    UNLIKELY: "Unlikely",
+                    POSSIBLE: "Possible",
+                    LIKELY: "Likely",
+                    VERY_LIKELY: "Very Likely"
+                };
+
+                const safeSearchEmbed = new EmbedBuilder()
+                    .setTitle("🛡️ Image Safe Search Analysis")
+                    .setDescription("Here are the safe search detections for the image:")
+                    .addFields(
+                        { name: "Adult Content", value: detectionLevels[safeSearchResult.adult], inline: true },
+                        { name: "Spoof Content", value: detectionLevels[safeSearchResult.spoof], inline: true },
+                        { name: "Medical Content", value: detectionLevels[safeSearchResult.medical], inline: true },
+                        { name: "Violence", value: detectionLevels[safeSearchResult.violence], inline: true },
+                        { name: "Racy Content", value: detectionLevels[safeSearchResult.racy], inline: true }
+                    )
+                    .setImage(imageUrl)
+                    .setColor(0xDB4437) // Google red
+                    .setFooter({
+                        text: `Requested by ${interaction.user.tag}`,
+                        iconURL: interaction.user.displayAvatarURL(),
+                    });
+                await interaction.editReply({ embeds: [safeSearchEmbed] });
+            } else {
+                await interaction.editReply({
+                    content: "🔎 No safe search data could be retrieved for this image.",
+                    ephemeral: false,
+                });
+            }
+        } catch (error) {
+            console.error("Cloud Vision Safe Search Error:", error);
+            await interaction.editReply({
+                content: "❌ Failed to perform safe search detection on the image. Ensure it's a valid image URL.",
+                ephemeral: true,
+            });
+        }
+        break;
+      }
           
 
             case "meme": {
