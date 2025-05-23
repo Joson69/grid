@@ -2242,6 +2242,78 @@ client.on("interactionCreate", async (interaction) => {
                 }
                 break;
             }
+
+            case "search": {
+        await interaction.deferReply(); // Defer the reply as the API call can take a moment.
+
+        const query = interaction.options.getString("query");
+        const cseId = process.env.GOOGLE_CSE_ID;
+        const apiKey = process.env.GOOGLE_CSE_API_KEY;
+
+        // Basic check for credentials
+        if (!cseId || !apiKey) {
+            return interaction.editReply({
+                content: "❌ Google Custom Search API credentials are not set up by the bot owner. Please contact the bot administrator.",
+                ephemeral: true,
+            });
+        }
+
+        try {
+            const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cseId}&q=${encodeURIComponent(query)}`;
+            const response = await fetch(url);
+            const data = await response.json();
+
+            // Handle API errors (e.g., quota exceeded, invalid key)
+            if (data.error) {
+                console.error("Google Custom Search API Error:", data.error);
+                return interaction.editReply({
+                    content: `❌ Search API Error: ${data.error.message || 'An unknown error occurred with the search service. Check logs.'}`,
+                    ephemeral: true,
+                });
+            }
+
+            // No search results found
+            if (!data.items || data.items.length === 0) {
+                return interaction.editReply({
+                    content: `🔍 No results found for "${query}". Try a different query.`,
+                    ephemeral: false, // Make this visible to everyone
+                });
+            }
+
+            // Process and display the results
+            // Limiting to top 3 results for cleaner Discord embed display
+            const results = data.items.slice(0, 3);
+
+            const searchEmbed = new EmbedBuilder()
+                .setTitle(`🔍 Search Results for "${query}"`)
+                .setColor(0x4285F4) // Google Blue color
+                .setFooter({
+                    text: `Requested by ${interaction.user.tag}`,
+                    iconURL: interaction.user.displayAvatarURL(),
+                });
+
+            results.forEach((item, index) => {
+                // Ensure snippet and link exist before adding
+                const snippet = item.snippet ? item.snippet.replace(/<[^>]*>?/gm, '') : 'No snippet available.'; // Remove HTML tags from snippet
+                const link = item.link || 'No link available.';
+                const title = item.title || 'Untitled';
+
+                searchEmbed.addFields(
+                    { name: `${index + 1}. ${title}`, value: `[Link](${link})\n${snippet}`, inline: false }
+                );
+            });
+
+            await interaction.editReply({ embeds: [searchEmbed] });
+
+        } catch (error) {
+            console.error("Custom Search Command Execution Error:", error);
+            await interaction.editReply({
+                content: "❌ An error occurred while trying to perform the search. Please try again later.",
+                ephemeral: true,
+            });
+        }
+        break;
+    }
           
 
             case "meme": {
