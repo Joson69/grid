@@ -30,6 +30,18 @@ const commands = [
        ],
    },
     {
+        name: "search",
+        description: "Searches the web using Google Custom Search",
+        options: [
+            {
+                name: "query",
+                type: 3, // STRING type
+                description: "The term you want to search for",
+                required: true,
+            },
+        ],
+    },
+    {
     name: 'ask',
     description: 'Ask a question to the Gemini AI',
     options: [
