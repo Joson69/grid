@@ -18,6 +18,60 @@ const commands = [
         ],
     },
     {
+        name: "ocr",
+        description: "Extracts text from an image.",
+        options: [
+            {
+                name: "image_url",
+                type: 3, // STRING type
+                description: "URL of the image (e.g., from Discord, Imgur, etc.)",
+                required: false, // Make false if attachment is an option
+            },
+            {
+                name: "image_attachment",
+                type: 11, // ATTACHMENT type
+                description: "Attach an image directly.",
+                required: false,
+            },
+        ],
+    },
+    {
+        name: "detectobjects",
+        description: "Detects objects and their locations in an image.",
+        options: [
+            {
+                name: "image_url",
+                type: 3, // STRING type
+                description: "URL of the image (e.g., from Discord, Imgur, etc.)",
+                required: false,
+            },
+            {
+                name: "image_attachment",
+                type: 11, // ATTACHMENT type
+                description: "Attach an image directly.",
+                required: false,
+            },
+        ],
+    },
+    {
+        name: "safesearch",
+        description: "Analyzes an image for explicit content.",
+        options: [
+            {
+                name: "image_url",
+                type: 3, // STRING type
+                description: "URL of the image (e.g., from Discord, Imgur, etc.)",
+                required: false,
+            },
+            {
+                name: "image_attachment",
+                type: 11, // ATTACHMENT type
+                description: "Attach an image directly.",
+                required: false,
+            },
+        ],
+    },
+    {
       name: 'wikipedia',
       description: 'Searches Wikipedia for a given query and returns a summary.',
       options: [
