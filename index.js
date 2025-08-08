@@ -151,7 +151,7 @@ function saveUserData() {
 }
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-preview-05-20" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-preview-image-generation" });
 
 const client = new Client({
   intents: [
@@ -2577,3 +2577,4 @@ client.on("interactionCreate", async (interaction) => {
 client.login(process.env.DISCORD_TOKEN).catch((error) => {
     console.error("❌ Login Failed:", error);
 });
+
