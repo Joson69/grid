@@ -247,6 +247,18 @@ const commands = [
         ],
     },
     {
+  name: 'privatechat',
+  description: 'Start a private, Gemini-powered AI chat thread',
+  options: [
+    {
+      name: 'topic',
+      type: 3, // STRING
+      description: 'Topic or question for the private AI chat',
+      required: true
+    }
+  ]
+},
+    {
         name: "meme",
         description: "Fetch a random meme from Reddit",
     },
@@ -542,3 +554,4 @@ const rest = new REST({ version: "10" }).setToken(token);
         console.error("Error registering slash commands:", error);
     }
 })();
+
