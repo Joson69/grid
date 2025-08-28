@@ -2462,7 +2462,32 @@ client.on("interactionCreate", async (interaction) => {
         }
         break;
       }
-          
+
+
+        case "privatechat": {
+  const topic = interaction.options.getString("topic");
+  // Create a thread for the user
+  const thread = await interaction.channel.threads.create({
+    name: `Private AI Chat - ${interaction.user.username}`,
+    autoArchiveDuration: 60, // 1 hour inactivity
+    reason: 'On-demand Gemini AI chat'
+  });
+  await thread.members.add(interaction.user.id);
+
+  // Get Gemini response
+  const generationConfig = { temperature: 0.9, topK: 1, topP: 1, maxOutputTokens: 1000 };
+  const parts = [{ text: topic }];
+  const result = await model.generateContent({
+    contents: [{ role: "user", parts }],
+    generationConfig,
+  });
+  const reply = result.response.text();
+  await thread.send(`**You:** ${topic}\n**Gemini:** ${reply}`);
+
+  await interaction.reply({ content: `✅ Started your private AI thread: <#${thread.id}>!`, ephemeral: true });
+  break;
+}
+
 
             case "meme": {
     await interaction.deferReply();
@@ -2577,5 +2602,6 @@ client.on("interactionCreate", async (interaction) => {
 client.login(process.env.DISCORD_TOKEN).catch((error) => {
     console.error("❌ Login Failed:", error);
 });
+
 
 
