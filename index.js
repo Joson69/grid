@@ -43,6 +43,12 @@ const visionClient = new vision.ImageAnnotatorClient();
 const translationClient = new TranslationServiceClient();
 const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
 
+const dataFile = 'naruto_quiz_helper.json';
+let quizHelper = fs.existsSync(dataFile) ? JSON.parse(fs.readFileSync(dataFile)) : {};
+let lastQuestionData = {};
+const NARUTO_BOTTO_ID = '770100332998295572';
+
+
 // Initialize Spotify API
 const spotifyApi = new SpotifyWebApi({
   clientId: process.env.SPOTIFY_CLIENT_ID,
@@ -228,6 +234,48 @@ client.on("messageCreate", async (message) => {
         contents: [{ role: "user", parts }],
         generationConfig,
       });
+
+// --- Naruto Botto Helper START ---
+if (message.author.id === NARUTO_BOTTO_ID && message.embeds.length > 0) {
+  const embed = message.embeds[0];
+  if (embed.title && embed.title.includes("mission")) {
+    const qMatch = embed.description.match(/Which.*\?/);
+    const aMatches = embed.description.match(/1\s(.+)\n2\s(.+)\n3\s(.+)/);
+    if (qMatch && aMatches) {
+      const question = qMatch[0].trim();
+      const answers = [aMatches[1].trim(), aMatches[2].trim(), aMatches[3].trim()];
+      lastQuestionData[message.id] = { question, answers };
+      if (quizHelper[question]) {
+        const correctIndex = quizHelper[question].correct;
+        await message.reply(`**Naruto Helper:** React to **${correctIndex + 1}** for the correct answer!`);
+      }
+    }
+  }
+}
+if (
+  message.author.id === NARUTO_BOTTO_ID &&
+  message.content &&
+  message.content.includes('Correct answer')
+) {
+  const revealMatch = message.content.match(/was: ([^\n]+)/);
+  if (revealMatch) {
+    const correctAnswer = revealMatch[1].trim();
+    const lastQuestionKey = Object.keys(lastQuestionData).pop();
+    if (lastQuestionKey) {
+      const { question, answers } = lastQuestionData[lastQuestionKey];
+      const correctIndex = answers.findIndex(
+        a => a.toLowerCase() === correctAnswer.toLowerCase()
+      );
+      if (question && correctIndex !== -1) {
+        quizHelper[question] = { answers, correct: correctIndex };
+        fs.writeFileSync(dataFile, JSON.stringify(quizHelper, null, 2));
+      }
+      delete lastQuestionData[lastQuestionKey];
+    }
+  }
+}
+// --- Naruto Botto Helper END ---
+
 
       let reply = result.response.text();
 
@@ -2602,6 +2650,7 @@ client.on("interactionCreate", async (interaction) => {
 client.login(process.env.DISCORD_TOKEN).catch((error) => {
     console.error("❌ Login Failed:", error);
 });
+
 
 
 
